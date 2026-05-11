@@ -1,0 +1,148 @@
+import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+
+export default function ArtistList({ artists = [], loading, onAdd, onEdit }) {
+  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState(new Set())
+
+  // ── filter ───────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim()
+    if (!q) return artists
+    return artists.filter(a => a.full_name.toLowerCase().includes(q))
+  }, [artists, search])
+
+  // ── selection ────────────────────────────────────────────
+  const toggleOne = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const toggleAll = () => {
+    if (selected.size === filtered.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(filtered.map(a => a.id)))
+    }
+  }
+
+  const viewSchedule = () => {
+    const ids = [...selected].join(',')
+    navigate(`/artists/schedule?ids=${ids}`)
+  }
+
+  return (
+    <div>
+      {/* ── toolbar ── */}
+      <div className="page-header">
+        <h1 className="page-title">Artists</h1>
+        <button className="btn btn-primary" onClick={onAdd}>+ Add artist</button>
+      </div>
+
+      {/* ── search + bulk action ── */}
+      <div className="filters">
+        <input
+          type="search"
+          placeholder="Search artists…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ maxWidth: 260 }}
+        />
+        {selected.size > 0 && (
+          <button className="btn btn-secondary" onClick={viewSchedule}>
+            View schedule ({selected.size} selected)
+          </button>
+        )}
+        {selected.size > 0 && (
+          <button className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set())}>
+            Clear selection
+          </button>
+        )}
+      </div>
+
+      {/* ── table ── */}
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style={{ width: 36 }}>
+                <input
+                  type="checkbox"
+                  checked={filtered.length > 0 && selected.size === filtered.length}
+                  onChange={toggleAll}
+                  style={{ width: 14, height: 14, accentColor: 'var(--brand)' }}
+                />
+              </th>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={6} style={{ textAlign: 'center', padding: 'var(--sp-8)', color: 'var(--text-muted)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--sp-2)' }}>
+                    <div className="spinner" />
+                    Loading artists…
+                  </div>
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="empty-state">
+                  {search ? `No artists matching "${search}"` : 'No artists yet. Add your first one.'}
+                </td>
+              </tr>
+            ) : filtered.map(artist => (
+              <tr
+                key={artist.id}
+                style={{ cursor: 'pointer' }}
+                onClick={() => navigate(`/artists/detail?id=${artist.id}`)}
+              >
+                <td onClick={e => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(artist.id)}
+                    onChange={() => toggleOne(artist.id)}
+                    style={{ width: 14, height: 14, accentColor: 'var(--brand)' }}
+                  />
+                </td>
+                <td style={{ fontWeight: 'var(--weight-medium)' }}>{artist.full_name}</td>
+                <td style={{ color: 'var(--text-secondary)' }}>{artist.phone || '—'}</td>
+                <td style={{ color: 'var(--text-secondary)' }}>{artist.email || '—'}</td>
+                <td>
+                  <span className={`badge ${artist.active ? 'badge-green' : 'badge-neutral'}`}>
+                    {artist.active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td onClick={e => e.stopPropagation()}>
+                  <div className="table-actions">
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => onEdit(artist)}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {artists.length > 0 && (
+        <div style={{ marginTop: 'var(--sp-3)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+          {filtered.length} of {artists.length} artists
+        </div>
+      )}
+    </div>
+  )
+}

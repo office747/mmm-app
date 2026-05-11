@@ -1,0 +1,9 @@
+###
+POST https://nn.makemusicmemories.com/webhook-test/g1g5/artist-sync
+Content-Type: application/json
+
+{
+  "adf": "adf"
+}
+
+###
