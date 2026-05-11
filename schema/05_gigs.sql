@@ -9,10 +9,12 @@ create table gigs (
   id                  uuid primary key default gen_random_uuid(),
 
   hotel_id            uuid not null references hotels(id) on delete restrict,
-  performance_type_id uuid references performance_types(id) on delete set null,
   band_id             uuid references bands(id) on delete set null,
 
   gig_date            date not null,
+
+  -- free-text performance type entered per gig, e.g. "Evening Jazz", "Pool DJ"
+  performance_type    text,
 
   -- what MMM charges the hotel for this gig
   -- entered manually per gig, no default lookup
@@ -65,8 +67,8 @@ create table gig_artists (
   -- plain numeric, e.g. 10, 20, 35 — zero means no transport
   transport_amount  numeric(10,2) not null default 0,
 
-  -- insurance: defaults to artist.insurance_type but overridable per gig
-  insurance_type text not null check (insurance_type in ('A', 'B')),
+  -- insurance cost for this artist at this gig — numeric, varies per artist per gig
+  insurance_amount  numeric(10,2) not null default 0,
 
   -- operational flags
   insurance_issued  boolean not null default false,

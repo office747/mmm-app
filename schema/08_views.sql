@@ -20,17 +20,20 @@ select
   g.status,
   g.source,
   g.hotel_price,
-  pt.name                                           as performance_type,
+  g.performance_type,
   g.recurrence_note,
   g.notes,
   count(ga.id)                                      as artist_count,
   coalesce(sum(ga.fee), 0)                          as total_artist_fees,
   coalesce(sum(ga.transport_amount), 0)             as total_transport,
+  coalesce(sum(ga.insurance_amount), 0)             as total_insurance,
   coalesce(sum(ga.fee), 0)
-    + coalesce(sum(ga.transport_amount), 0)         as total_artist_cost,
+    + coalesce(sum(ga.transport_amount), 0)
+    + coalesce(sum(ga.insurance_amount), 0)         as total_artist_cost,
   g.hotel_price
     - (coalesce(sum(ga.fee), 0)
-    + coalesce(sum(ga.transport_amount), 0))        as mmm_margin,
+    + coalesce(sum(ga.transport_amount), 0)
+    + coalesce(sum(ga.insurance_amount), 0))        as mmm_margin,
   bool_and(ga.insurance_issued)                     as all_insurance_issued,
   -- flag: performed but not yet on any active invoice
   g.status = 'performed' and not exists (
@@ -42,11 +45,10 @@ select
   )                                                 as needs_invoicing
 from gigs g
 join hotels h on h.id = g.hotel_id
-left join performance_types pt on pt.id = g.performance_type_id
 left join gig_artists ga on ga.gig_id = g.id
 group by
   g.id, g.hotel_id, h.name, g.gig_date, g.status, g.source,
-  g.hotel_price, pt.name, g.recurrence_note, g.notes;
+  g.hotel_price, g.performance_type, g.recurrence_note, g.notes;
 
 
 -- ============================================================

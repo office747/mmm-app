@@ -10,8 +10,9 @@ export default function ArtistPayroll({ gigs, loading, error, onRefetch, onToggl
   const totals = useMemo(() => (gigs || []).reduce((sum, g) => ({
     fees:      sum.fees + Number(g.fee),
     transport: sum.transport + Number(g.transport_amount),
+    insurance: sum.insurance + Number(g.insurance_amount),
     gross:     sum.gross + Number(g.total_earned),
-  }), { fees: 0, transport: 0, gross: 0 }), [gigs])
+  }), { fees: 0, transport: 0, insurance: 0, gross: 0 }), [gigs])
 
   if (loading) return <LoadingSpinner message="Loading payroll…" />
   if (error)   return <ErrorBanner message={error} onRetry={onRefetch} />
@@ -32,8 +33,9 @@ export default function ArtistPayroll({ gigs, loading, error, onRefetch, onToggl
               <th>Role</th>
               <th>Fee</th>
               <th>Transport</th>
+              <th>Insurance €</th>
               <th>Total</th>
-              <th>Insurance</th>
+              <th>Ins. issued</th>
             </tr>
           </thead>
           <tbody>
@@ -50,6 +52,12 @@ export default function ArtistPayroll({ gigs, loading, error, onRefetch, onToggl
                 <td>
                   {Number(g.transport_amount) > 0
                     ? `€${Number(g.transport_amount).toFixed(2)}`
+                    : <span style={{ color: 'var(--text-muted)' }}>—</span>
+                  }
+                </td>
+                <td>
+                  {Number(g.insurance_amount) > 0
+                    ? `€${Number(g.insurance_amount).toFixed(2)}`
                     : <span style={{ color: 'var(--text-muted)' }}>—</span>
                   }
                 </td>
@@ -75,11 +83,10 @@ export default function ArtistPayroll({ gigs, loading, error, onRefetch, onToggl
 
             {/* totals row */}
             <tr className="row-summary">
-              <td colSpan={4}>
-                <strong>{gigs.length} gig{gigs.length !== 1 ? 's' : ''}</strong>
-              </td>
+              <td colSpan={4}><strong>{gigs.length} gig{gigs.length !== 1 ? 's' : ''}</strong></td>
               <td><strong>€{totals.fees.toFixed(2)}</strong></td>
               <td><strong>€{totals.transport.toFixed(2)}</strong></td>
+              <td><strong>€{totals.insurance.toFixed(2)}</strong></td>
               <td><strong>€{totals.gross.toFixed(2)}</strong></td>
               <td />
             </tr>

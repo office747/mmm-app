@@ -51,7 +51,8 @@ select
   count(ga.id)                                  as gig_count,
   sum(ga.fee)                                   as total_fees,
   sum(ga.transport_amount)                      as total_transport,
-  sum(ga.fee) + sum(ga.transport_amount)        as total_gross
+  sum(ga.insurance_amount)                      as total_insurance,
+  sum(ga.fee) + sum(ga.transport_amount) + sum(ga.insurance_amount) as total_gross
 from gig_artists ga
 join gigs g    on g.id = ga.gig_id
 join artists a on a.id = ga.artist_id
@@ -73,12 +74,12 @@ select
   g.id                          as gig_id,
   g.gig_date,
   h.name                        as hotel_name,
-  pt.name                       as performance_type,
+  g.performance_type,
   ga.role,
   ga.fee,
   ga.transport_amount,
-  ga.fee + ga.transport_amount  as total_earned,
-  ga.insurance_type,
+  ga.fee + ga.transport_amount + ga.insurance_amount  as total_earned,
+  ga.insurance_amount,
   ga.insurance_issued,
   ga.sms_sent,
   ga.email_sent,
@@ -89,5 +90,4 @@ select
 from gig_artists ga
 join gigs g            on g.id  = ga.gig_id
 join artists a         on a.id  = ga.artist_id
-join hotels h          on h.id  = g.hotel_id
-left join performance_types pt on pt.id = g.performance_type_id;
+join hotels h          on h.id  = g.hotel_id;
