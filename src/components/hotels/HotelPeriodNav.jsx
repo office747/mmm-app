@@ -2,7 +2,7 @@ import { addDays, isoWeekStart, monthOf, currentMonth, fmtWeekLabel, fmtMonthLab
 
 export default function HotelPeriodNav({ periodMode, weekStart, month, onSetParam }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', marginBottom: 'var(--sp-4)', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-4)', flexWrap: 'wrap' }}>
 
       {/* week / month toggle */}
       <div style={{ display: 'flex', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>

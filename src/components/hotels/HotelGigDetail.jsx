@@ -1,4 +1,7 @@
+import { useNavigate } from 'react-router-dom'
+
 export default function HotelGigDetail({ g, lines, onEdit, onDuplicate, onCancel, onDelete, onToggleInsurance, toggling, onGenerateInvoice }) {
+  const navigate = useNavigate()
   return (
     <tr>
       <td colSpan={10} style={{ padding: 0, borderBottom: '1px solid var(--border)' }}>
@@ -25,7 +28,15 @@ export default function HotelGigDetail({ g, lines, onEdit, onDuplicate, onCancel
               <tbody>
                 {lines.map(a => (
                   <tr key={a.gig_artist_id}>
-                    <td style={{ fontWeight: 'var(--weight-medium)' }}>{a.artist_name}</td>
+                    <td>
+                      <button
+                        className="btn btn-ghost"
+                        style={{ padding: 0, fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)', color: 'var(--brand)' }}
+                        onClick={() => navigate(`/artists/detail?id=${a.artist_id}`)}
+                      >
+                        {a.artist_name} →
+                      </button>
+                    </td>
                     <td style={{ color: 'var(--text-secondary)' }}>{a.role || '—'}</td>
                     <td>€{Number(a.fee).toFixed(2)}</td>
                     <td>

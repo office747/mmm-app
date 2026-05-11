@@ -42,8 +42,9 @@ export default function HotelGigs({
         <button className="btn btn-primary btn-sm" onClick={onAdd}>+ Add gig</button>
       </div>
 
-      <div className="table-wrap">
-        <table>
+      <div className="weekly-scroll-wrap">
+        <div className="table-wrap">
+          <table>
           <thead>
             <tr>
               <th style={{ width: 24 }} />
@@ -52,7 +53,7 @@ export default function HotelGigs({
               <th>Source</th>
               <th>Hotel price</th>
               <th>Artist cost</th>
-              <th>Margin</th>
+              {/* <th>Margin</th> */}
               <th>Status</th>
               <th>Invoice</th>
               <th></th>
@@ -91,6 +92,7 @@ export default function HotelGigs({
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )

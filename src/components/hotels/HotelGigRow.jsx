@@ -29,12 +29,14 @@ export default function HotelGigRow({ g, isOpen, onToggle, onEdit, onDuplicate, 
         €{Number(g.total_artist_cost).toFixed(2)}
       </td>
 
+      {/* margin column — hidden for now
       <td style={{
         color: margin < 0 ? 'var(--red)' : margin === 0 ? 'var(--text-muted)' : 'var(--green)',
         fontWeight: 'var(--weight-medium)',
       }}>
         {margin < 0 ? '−' : '+'}€{Math.abs(margin).toFixed(2)}
       </td>
+      */}
 
       {/* status select */}
       <td onClick={e => e.stopPropagation()}>
