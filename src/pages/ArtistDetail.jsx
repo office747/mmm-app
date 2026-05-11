@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { useSupabase } from '../hooks/useSupabase.js'
@@ -6,15 +7,8 @@ import { useQueryParams } from '../hooks/useQueryParams.js'
 import { useSaveToast, LoadingSpinner, ErrorBanner, SaveToast } from '../components/ui/index.jsx'
 import ArtistWeekly from '../components/artists/ArtistWeekly.jsx'
 import ArtistPayroll from '../components/artists/ArtistPayroll.jsx'
-import {
-  isoWeekStart,
-  addDays,
-  currentMonth,
-  monthOf,
-  fmtMonthLabel as fmtMonth,
-  fmtWeekLabel,
-  monthStart
-} from '../lib/dates.js'
+import GigModal from '../components/shared/GigModal.jsx'
+import { isoWeekStart, addDays, currentMonth, monthOf, monthRange, fmtMonthLabel as fmtMonth, fmtWeekLabel } from '../lib/dates.js'
 
 
 export default function ArtistDetail() {
@@ -48,14 +42,34 @@ export default function ArtistDetail() {
 
   // ── monthly gigs ─────────────────────────────────────────
   const { data: monthGigs, loading: monthLoading, error: monthError, refetch: refetchMonth } = useSupabase(
-    () => supabase
-      .from('artist_gig_detail')
-      .select('*')
-      .eq('artist_id', artistId)
-      .gte('gig_date', month + '-01')
-      .lte('gig_date', month + '-31')
-      .order('gig_date'),
+    () => {
+      const { start, end } = monthRange(month)
+      return supabase
+        .from('artist_gig_detail')
+        .select('*')
+        .eq('artist_id', artistId)
+        .gte('gig_date', start)
+        .lte('gig_date', end)
+        .order('gig_date')
+    },
     [artistId, month]
+  )
+
+  // ── gig modal state ───────────────────────────────────────
+  const [gigModalOpen,   setGigModalOpen]   = useState(false)
+  const [editGig,        setEditGig]        = useState(null)
+  const [editGigArtists, setEditGigArtists] = useState([])
+
+  // ── all artists for selector ──────────────────────────────
+  const { data: artists } = useSupabase(
+    () => supabase.from('artists').select('id, full_name').order('full_name'),
+    []
+  )
+
+  // ── all hotels for gig modal (no pre-selected hotel) ─────
+  const { data: hotels } = useSupabase(
+    () => supabase.from('hotels').select('id, name').eq('active', true).order('name'),
+    []
   )
 
   // ── toggle insurance ─────────────────────────────────────
@@ -70,6 +84,71 @@ export default function ArtistDetail() {
       }
     }
   )
+
+  // ── save gig ─────────────────────────────────────────────
+  const { save: saveGig, saving: savingGig, saveError: gigError, clearError: clearGigError } = useSave(
+    async ({ gig, artistLines }) => {
+      const { id, ...fields } = gig
+      if (id) {
+        const { error } = await supabase.from('gigs').update(fields).eq('id', id)
+        if (error) throw error
+      }
+      // replace artist lines
+      const gigId = id
+      if (gigId) {
+        await supabase.from('gig_artists').delete().eq('gig_id', gigId)
+        const validLines = artistLines.filter(l => l.artist_id)
+        if (validLines.length) {
+          const { error } = await supabase.from('gig_artists').insert(
+            validLines.map(l => ({
+              gig_id:           gigId,
+              artist_id:        l.artist_id,
+              role:             l.role             || null,
+              fee:              Number(l.fee)              || 0,
+              transport_amount: Number(l.transport_amount) || 0,
+              insurance_amount: Number(l.insurance_amount) || 0,
+              insurance_issued: l.insurance_issued         || false,
+            }))
+          )
+          if (error) throw error
+        }
+      }
+      return { data: true, error: null }
+    },
+    {
+      onSuccess: () => {
+        setGigModalOpen(false)
+        setEditGig(null)
+        setEditGigArtists([])
+        refetchWeek()
+        refetchMonth()
+        showToast()
+      }
+    }
+  )
+
+  // ── open gig modal ────────────────────────────────────────
+  const openEditGig = (g) => {
+    setEditGig({
+      id:               g.gig_id,
+      hotel_id:         g.hotel_id,
+      gig_date:         g.gig_date,
+      performance_type: g.performance_type,
+      hotel_price:      g.hotel_price,
+      status:           g.gig_status,
+      source:           g.source,
+      notes:            g.gig_notes,
+    })
+    setEditGigArtists([{
+      artist_id:        g.artist_id,
+      role:             g.role,
+      fee:              g.fee,
+      transport_amount: g.transport_amount,
+      insurance_amount: g.insurance_amount,
+      insurance_issued: g.insurance_issued,
+    }])
+    setGigModalOpen(true)
+  }
 
   // ── export CSV ───────────────────────────────────────────
   const exportCSV = () => {
@@ -145,6 +224,7 @@ export default function ArtistDetail() {
             <button className="btn btn-ghost btn-sm" onClick={() => setParam('week', isoWeekStart())}>Today</button>
           </div>
           <ArtistWeekly
+            artistId={artistId}
             weekStart={weekStart}
             gigs={weekGigs}
             loading={weekLoading}
@@ -152,6 +232,7 @@ export default function ArtistDetail() {
             onRefetch={refetchWeek}
             onToggleInsurance={toggleInsurance}
             toggling={toggling}
+            onEditGig={openEditGig}
           />
         </>
       )}
@@ -181,11 +262,25 @@ export default function ArtistDetail() {
             onToggleInsurance={toggleInsurance}
             toggling={toggling}
             onExport={exportCSV}
+            onEditGig={openEditGig}
           />
         </>
       )}
 
       {toastVisible && <SaveToast message="Saved" />}
+
+      <GigModal
+        open={gigModalOpen}
+        gig={editGig}
+        gigArtists={editGigArtists}
+        hotels={hotels}
+        artists={artists}
+        onSave={saveGig}
+        onClose={() => { setGigModalOpen(false); setEditGig(null); clearGigError() }}
+        saving={savingGig}
+        saveError={gigError}
+        onClearError={clearGigError}
+      />
     </div>
   )
 }

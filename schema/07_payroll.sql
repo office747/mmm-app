@@ -73,6 +73,7 @@ select
   a.full_name                   as artist_name,
   g.id                          as gig_id,
   g.gig_date,
+  g.hotel_id,
   h.name                        as hotel_name,
   g.performance_type,
   ga.role,

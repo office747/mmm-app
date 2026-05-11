@@ -1,14 +1,16 @@
 import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { LoadingSpinner, ErrorBanner } from '../ui/index.jsx'
 import { fmtDate } from '../../lib/dates.js'
 
+export default function ArtistPayroll({ gigs, loading, error, onRefetch, onToggleInsurance, toggling, onExport, onEditGig }) {
+  const navigate = useNavigate()
 
-export default function ArtistPayroll({ gigs, loading, error, onRefetch, onToggleInsurance, toggling, onExport }) {
   const totals = useMemo(() => (gigs || []).reduce((sum, g) => ({
-    fees:      sum.fees + Number(g.fee),
+    fees:      sum.fees      + Number(g.fee),
     transport: sum.transport + Number(g.transport_amount),
     insurance: sum.insurance + Number(g.insurance_amount),
-    gross:     sum.gross + Number(g.total_earned),
+    gross:     sum.gross     + Number(g.total_earned),
   }), { fees: 0, transport: 0, insurance: 0, gross: 0 }), [gigs])
 
   if (loading) return <LoadingSpinner message="Loading payroll…" />
@@ -41,8 +43,24 @@ export default function ArtistPayroll({ gigs, loading, error, onRefetch, onToggl
                 key={g.gig_artist_id}
                 className={g.gig_status === 'cancelled' ? 'row-cancelled' : ''}
               >
-                <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(g.gig_date)}</td>
-                <td style={{ fontWeight: 'var(--weight-medium)' }}>{g.hotel_name}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <button
+                    className="btn btn-ghost"
+                    style={{ padding: 0, fontSize: 'var(--text-sm)', color: 'var(--brand)' }}
+                    onClick={() => onEditGig?.(g)}
+                  >
+                    {fmtDate(g.gig_date)}
+                  </button>
+                </td>
+                <td>
+                  <button
+                    className="btn btn-ghost"
+                    style={{ padding: 0, fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)', color: 'var(--brand)' }}
+                    onClick={() => navigate(`/hotels/detail?id=${g.hotel_id}`)}
+                  >
+                    {g.hotel_name} →
+                  </button>
+                </td>
                 <td style={{ color: 'var(--text-secondary)' }}>{g.performance_type || '—'}</td>
                 <td style={{ color: 'var(--text-secondary)' }}>{g.role || '—'}</td>
                 <td>€{Number(g.fee).toFixed(2)}</td>
@@ -65,7 +83,7 @@ export default function ArtistPayroll({ gigs, loading, error, onRefetch, onToggl
                   <label className="checkbox-label">
                     <input
                       type="checkbox"
-                      checked={g.insurance_issued}
+                      checked={!!g.insurance_issued}
                       disabled={toggling}
                       onChange={e => onToggleInsurance({ gigArtistId: g.gig_artist_id, value: e.target.checked })}
                     />
@@ -78,7 +96,6 @@ export default function ArtistPayroll({ gigs, loading, error, onRefetch, onToggl
               </tr>
             ))}
 
-            {/* totals row */}
             <tr className="row-summary">
               <td colSpan={4}><strong>{gigs.length} gig{gigs.length !== 1 ? 's' : ''}</strong></td>
               <td><strong>€{totals.fees.toFixed(2)}</strong></td>
@@ -92,9 +109,7 @@ export default function ArtistPayroll({ gigs, loading, error, onRefetch, onToggl
       </div>
 
       <div style={{ marginTop: 'var(--sp-4)', display: 'flex', gap: 'var(--sp-2)' }}>
-        <button className="btn btn-secondary" onClick={onExport}>
-          Export CSV
-        </button>
+        <button className="btn btn-secondary" onClick={onExport}>Export CSV</button>
       </div>
     </div>
   )
