@@ -1,34 +1,33 @@
 import { useState, useEffect } from 'react'
 import { SaveError } from '../ui/index.jsx'
+import { fmtDateLong as fmtDate } from '../../lib/dates.js'
 
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-}
 
 const VAT_RATE = 0.24
 
 export default function InvoiceReview({
   open,
   hotel,
-  gigs,           // uninvoiced gigs to include — each is a gig_summary row
-  isPty,          // boolean — correction invoice
-  originalInvoice,// the invoice being corrected (if PTY)
-  onConfirm,      // fires N8n webhook
+  gigs,            // ALL uninvoiced gigs — full checklist
+  preSelected,     // Set of gig_ids to tick by default (optional, defaults to all)
+  isPty,
+  originalInvoice,
+  onConfirm,
   onClose,
   sending,
   sendError,
   onClearError,
 }) {
-  const [selected, setSelected]       = useState(new Set())
-  const [emailSubject, setSubject]    = useState('')
-  const [emailBody, setBody]          = useState('')
+  const [selected, setSelected]    = useState(new Set())
+  const [emailSubject, setSubject] = useState('')
+  const [emailBody, setBody]       = useState('')
 
   useEffect(() => {
     if (open && gigs?.length) {
-      setSelected(new Set(gigs.map(g => g.gig_id)))
+      // use preSelected if provided, otherwise tick all
+      setSelected(preSelected instanceof Set ? preSelected : new Set(gigs.map(g => g.gig_id)))
     }
-  }, [open, gigs])
+  }, [open, gigs, preSelected])
 
   useEffect(() => {
     if (!open || !hotel) return

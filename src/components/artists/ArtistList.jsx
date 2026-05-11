@@ -10,7 +10,11 @@ export default function ArtistList({ artists = [], loading, onAdd, onEdit }) {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
     if (!q) return artists
-    return artists.filter(a => a.full_name.toLowerCase().includes(q))
+    return artists.filter(a =>
+      a.full_name.toLowerCase().includes(q) ||
+      (a.email || '').toLowerCase().includes(q) ||
+      (a.phone || '').toLowerCase().includes(q)
+    )
   }, [artists, search])
 
   // ── selection ────────────────────────────────────────────
@@ -47,7 +51,7 @@ export default function ArtistList({ artists = [], loading, onAdd, onEdit }) {
       <div className="filters">
         <input
           type="search"
-          placeholder="Search artists…"
+          placeholder="Search by name, email or phone…"
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{ maxWidth: 260 }}

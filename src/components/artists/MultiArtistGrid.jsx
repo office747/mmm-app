@@ -1,16 +1,7 @@
 import { useMemo } from 'react'
 import { LoadingSpinner, ErrorBanner } from '../ui/index.jsx'
+import { addDays, fmtDate as fmtDay } from '../../lib/dates.js'
 
-function addDays(iso, n) {
-  const d = new Date(iso)
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
-}
-
-function fmtDay(iso) {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'numeric' })
-}
 
 export default function MultiArtistGrid({ weekStart, artists, gigs, loading, error, onRefetch }) {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))

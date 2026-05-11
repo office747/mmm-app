@@ -1,10 +1,5 @@
 // shared across HotelGigs, HotelGigRow, HotelGigDetail
-
-export function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
-}
-
+export { fmtDate } from '../../lib/dates.js'
 export const STATUS_BG = {
   planned:   'var(--bg-hover)',
   confirmed: 'var(--blue-bg)',

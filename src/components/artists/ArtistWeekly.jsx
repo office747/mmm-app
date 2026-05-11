@@ -1,16 +1,6 @@
+import { addDays, fmtDate as fmtDay } from "../../lib/dates.js"
 import { useMemo } from 'react'
 import { LoadingSpinner, ErrorBanner } from '../ui/index.jsx'
-
-function addDays(iso, n) {
-  const d = new Date(iso)
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
-}
-
-function fmtDay(iso) {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'numeric' })
-}
 
 export default function ArtistWeekly({ weekStart, gigs, loading, error, onRefetch, onToggleInsurance, toggling }) {
   const weekEnd  = addDays(weekStart, 6)

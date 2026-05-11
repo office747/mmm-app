@@ -1,10 +1,7 @@
 import { useState } from 'react'
 import { LoadingSpinner, ErrorBanner } from '../ui/index.jsx'
+import { fmtDateLong as fmtDate } from '../../lib/dates.js'
 
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-}
 
 const STATUS_BADGE = {
   draft:     'badge-neutral',

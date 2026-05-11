@@ -1,10 +1,7 @@
 import { useMemo } from 'react'
 import { LoadingSpinner, ErrorBanner } from '../ui/index.jsx'
+import { fmtDate } from '../../lib/dates.js'
 
-function fmtDate(iso) {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'numeric' })
-}
 
 export default function ArtistPayroll({ gigs, loading, error, onRefetch, onToggleInsurance, toggling, onExport }) {
   const totals = useMemo(() => (gigs || []).reduce((sum, g) => ({

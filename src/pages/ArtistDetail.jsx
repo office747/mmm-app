@@ -6,30 +6,16 @@ import { useQueryParams } from '../hooks/useQueryParams.js'
 import { useSaveToast, LoadingSpinner, ErrorBanner, SaveToast } from '../components/ui/index.jsx'
 import ArtistWeekly from '../components/artists/ArtistWeekly.jsx'
 import ArtistPayroll from '../components/artists/ArtistPayroll.jsx'
+import {
+  isoWeekStart,
+  addDays,
+  currentMonth,
+  monthOf,
+  fmtMonthLabel as fmtMonth,
+  fmtWeekLabel,
+  monthStart
+} from '../lib/dates.js'
 
-function isoWeekStart() {
-  const d = new Date()
-  const day = d.getDay() || 7
-  d.setDate(d.getDate() - day + 1)
-  return d.toISOString().slice(0, 10)
-}
-
-function addDays(iso, n) {
-  const d = new Date(iso)
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
-}
-
-function monthStart(offset = 0) {
-  const d = new Date()
-  d.setDate(1)
-  d.setMonth(d.getMonth() + offset)
-  return d.toISOString().slice(0, 7)
-}
-
-function fmtMonth(ym) {
-  return new Date(ym + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-}
 
 export default function ArtistDetail() {
   const navigate = useNavigate()

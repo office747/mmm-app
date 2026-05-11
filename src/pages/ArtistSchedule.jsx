@@ -4,19 +4,7 @@ import { useSupabase } from '../hooks/useSupabase.js'
 import { useQueryParams } from '../hooks/useQueryParams.js'
 import { LoadingSpinner, ErrorBanner } from '../components/ui/index.jsx'
 import MultiArtistGrid from '../components/artists/MultiArtistGrid.jsx'
-
-function isoWeekStart() {
-  const d = new Date()
-  const day = d.getDay() || 7
-  d.setDate(d.getDate() - day + 1)
-  return d.toISOString().slice(0, 10)
-}
-
-function addDays(iso, n) {
-  const d = new Date(iso)
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
-}
+import { isoWeekStart, addDays } from '../lib/dates.js'
 
 export default function ArtistSchedule() {
   const navigate  = useNavigate()

@@ -3,37 +3,12 @@ import { supabase } from '../lib/supabase'
 import { useSupabase } from '../hooks/useSupabase'
 import { useQueryParams } from '../hooks/useQueryParams'
 import { useSave } from '../hooks/useSave'
-import { useSaveToast, LoadingSpinner, ErrorBanner, SaveError, SaveToast } from '../components/Ui/index.jsx'
+import { useSaveToast, LoadingSpinner, ErrorBanner, SaveError, SaveToast } from '../components/ui/index.js'
+import { isoWeekStart, addDays, fmtDate, fmtMonthLabel as fmtMonth, currentMonth } from '../lib/dates.js'
 
 // ── helpers ───────────────────────────────────────────────────
-function isoWeekStart(offsetWeeks = 0) {
-  const d = new Date()
-  const day = d.getDay() || 7
-  d.setDate(d.getDate() - day + 1 + offsetWeeks * 7)
-  return d.toISOString().slice(0, 10)
-}
 
-function addDays(iso, n) {
-  const d = new Date(iso)
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
-}
 
-function fmtDate(iso) {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'numeric' })
-}
-
-function fmtMonth(iso) {
-  return new Date(iso + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-}
-
-function monthStart(offset = 0) {
-  const d = new Date()
-  d.setDate(1)
-  d.setMonth(d.getMonth() + offset)
-  return d.toISOString().slice(0, 7) // YYYY-MM
-}
 
 const TRANSPORT_LABEL = { gas_a: 'Gas A €10', gas_b: 'Gas B €20', none: '—' }
 
