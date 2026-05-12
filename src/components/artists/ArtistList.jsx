@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { notifyArtistSms, notifyArtistEmail } from '../../lib/n8n/index.js'
 import NotifyPopup from '../shared/NotifyPopup.jsx'
+import CopyButton from '../ui/CopyButton.jsx'
 
 export default function ArtistList({ artists = [], loading, onAdd, onEdit }) {
   const navigate = useNavigate()
@@ -141,8 +142,18 @@ export default function ArtistList({ artists = [], loading, onAdd, onEdit }) {
                   />
                 </td>
                 <td style={{ fontWeight: 'var(--weight-medium)' }}>{artist.full_name}</td>
-                <td style={{ color: 'var(--text-secondary)' }}>{artist.phone || '—'}</td>
-                <td style={{ color: 'var(--text-secondary)' }}>{artist.email || '—'}</td>
+                <td style={{ color: 'var(--text-secondary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <span>{artist.phone || '—'}</span>
+                    <CopyButton value={artist.phone} label="Copy phone" />
+                  </div>
+                </td>
+                <td style={{ color: 'var(--text-secondary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <span>{artist.email || '—'}</span>
+                    <CopyButton value={artist.email} label="Copy email" />
+                  </div>
+                </td>
                 <td>
                   <span className={`badge ${artist.active ? 'badge-green' : 'badge-neutral'}`}>
                     {artist.active ? 'Active' : 'Inactive'}

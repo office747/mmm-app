@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { addDays, fmtDate } from '../../lib/dates.js'
 import { LoadingSpinner, ErrorBanner } from '../ui/index.jsx'
 import ProgrammeCell from './ProgrammeCell.jsx'
@@ -19,6 +20,7 @@ export default function ProgrammeGrid({
   showArtists,
   onAddGig,
 }) {
+  const navigate = useNavigate()
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
   // index gigs by hotelId + date
@@ -129,9 +131,14 @@ export default function ProgrammeGrid({
                 whiteSpace: 'nowrap',
                 boxShadow: '2px 0 0 var(--border)',
               }}>
-                <div>{hotel.name}</div>
+                <div
+                  onClick={() => navigate(`/hotels/detail?id=${hotel.id}`)}
+                  style={{ color: 'var(--brand)', cursor: 'pointer', fontWeight: 'var(--weight-medium)' }}
+                >
+                  {hotel.name}
+                </div>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 'var(--weight-normal)' }}>
-                  {hotel.billing_cycle}
+                  invoicing {hotel.billing_cycle}
                 </div>
               </td>
 
