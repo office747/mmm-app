@@ -1,10 +1,32 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { notifyArtistSms, notifyArtistEmail } from '../../lib/n8n/index.js'
+import NotifyPopup from '../shared/NotifyPopup.jsx'
 
 export default function ArtistList({ artists = [], loading, onAdd, onEdit }) {
   const navigate = useNavigate()
-  const [search, setSearch] = useState('')
+  const [search,   setSearch]   = useState('')
   const [selected, setSelected] = useState(new Set())
+  const [popup,    setPopup]    = useState(null) // { artist, type, triggerRef }
+  const [sending,  setSending]  = useState({})
+  const [status,   setStatus]   = useState({})
+
+  const handleNotify = async (type, artist, message) => {
+    const key = `${artist.id}-${type}`
+    setSending(prev => ({ ...prev, [key]: true }))
+    try {
+      const a = { artist_name: artist.full_name, artist_phone: artist.phone, artist_email: artist.email }
+      type === 'sms'
+        ? await notifyArtistSms(a, null, message)
+        : await notifyArtistEmail(a, null, message)
+      setStatus(prev => ({ ...prev, [key]: { ok: true, at: new Date() } }))
+    } catch (err) {
+      console.warn(`Notify failed:`, err.message)
+      setStatus(prev => ({ ...prev, [key]: { ok: false, at: new Date() } }))
+    } finally {
+      setSending(prev => ({ ...prev, [key]: false }))
+    }
+  }
 
   // ── filter ───────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -128,11 +150,27 @@ export default function ArtistList({ artists = [], loading, onAdd, onEdit }) {
                 </td>
                 <td onClick={e => e.stopPropagation()}>
                   <div className="table-actions">
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => onEdit(artist)}
-                    >
+                    <button className="btn btn-ghost btn-sm" onClick={() => onEdit(artist)}>
                       Edit
+                    </button>
+                    <button
+                      title={artist.phone ? `SMS ${artist.phone}` : 'No phone'}
+                      disabled={!artist.phone || sending[`${artist.id}-sms`]}
+                      className="btn btn-ghost btn-sm"
+                      style={{ color: status[`${artist.id}-sms`]?.ok === true ? 'var(--green)' : status[`${artist.id}-sms`]?.ok === false ? 'var(--red)' : artist.phone ? 'var(--text-secondary)' : 'var(--text-muted)' }}
+                      ref={el => { if (el) el._artistId = artist.id }}
+                      onClick={e => artist.phone && setPopup({ artist, type: 'sms', triggerRef: { current: e.currentTarget } })}
+                    >
+                      {sending[`${artist.id}-sms`] ? '…' : '✉︎'}
+                    </button>
+                    <button
+                      title={artist.email ? `Email ${artist.email}` : 'No email'}
+                      disabled={!artist.email || sending[`${artist.id}-email`]}
+                      className="btn btn-ghost btn-sm"
+                      style={{ color: status[`${artist.id}-email`]?.ok === true ? 'var(--green)' : status[`${artist.id}-email`]?.ok === false ? 'var(--red)' : artist.email ? 'var(--text-secondary)' : 'var(--text-muted)' }}
+                      onClick={e => artist.email && setPopup({ artist, type: 'email', triggerRef: { current: e.currentTarget } })}
+                    >
+                      {sending[`${artist.id}-email`] ? '…' : '@'}
                     </button>
                   </div>
                 </td>
@@ -146,6 +184,19 @@ export default function ArtistList({ artists = [], loading, onAdd, onEdit }) {
         <div style={{ marginTop: 'var(--sp-3)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
           {filtered.length} of {artists.length} artists
         </div>
+      )}
+
+      {popup && (
+        <NotifyPopup
+          type={popup.type}
+          artist={{ artist_name: popup.artist.full_name, artist_phone: popup.artist.phone, artist_email: popup.artist.email }}
+          gig={null}
+          triggerRef={popup.triggerRef}
+          sending={sending[`${popup.artist.id}-${popup.type}`]}
+          status={status[`${popup.artist.id}-${popup.type}`]}
+          onSend={msg => handleNotify(popup.type, popup.artist, msg)}
+          onClose={() => setPopup(null)}
+        />
       )}
     </div>
   )

@@ -155,6 +155,8 @@ export default function Weekly() {
           if (aErr) throw aErr
         }
       }
+      // update detailGig immediately so modal shows fresh values
+      setDetailGig(prev => prev ? { ...prev, ...rest, gig_id: id } : prev)
       return { data: true, error: null }
     },
     { onSuccess: () => { refetchGigs(); refetchArtists(); showToast() } }
@@ -184,6 +186,7 @@ export default function Weekly() {
       gig_date:         g.gig_date,
       performance_type: g.performance_type,
       hotel_price:      g.hotel_price,
+      start_time:       g.start_time || '',
       status:           g.status,
       source:           g.source,
       notes:            g.notes,

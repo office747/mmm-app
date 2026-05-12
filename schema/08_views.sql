@@ -21,6 +21,7 @@ select
   g.source,
   g.hotel_price,
   g.performance_type,
+  g.start_time,
   g.recurrence_note,
   g.notes,
   count(ga.id)                                      as artist_count,
@@ -48,7 +49,7 @@ join hotels h on h.id = g.hotel_id
 left join gig_artists ga on ga.gig_id = g.id
 group by
   g.id, g.hotel_id, h.name, g.gig_date, g.status, g.source,
-  g.hotel_price, g.performance_type, g.recurrence_note, g.notes;
+  g.hotel_price, g.performance_type, g.start_time, g.recurrence_note, g.notes;
 
 
 -- ============================================================

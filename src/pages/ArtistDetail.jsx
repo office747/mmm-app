@@ -8,16 +8,7 @@ import { useSaveToast, LoadingSpinner, ErrorBanner, SaveToast } from '../compone
 import ArtistWeekly from '../components/artists/ArtistWeekly.jsx'
 import ArtistPayroll from '../components/artists/ArtistPayroll.jsx'
 import GigModal from '../components/shared/GigModal.jsx'
-import {
-    isoWeekStart,
-    addDays,
-    currentMonth,
-    monthOf,
-    monthRange,
-    fmtMonthLabel as fmtMonth,
-    fmtWeekLabel,
-    monthStart
-} from '../lib/dates.js'
+import { isoWeekStart, addDays, currentMonth, monthOf, monthRange, fmtMonthLabel as fmtMonth, fmtWeekLabel } from '../lib/dates.js'
 
 
 export default function ArtistDetail() {
@@ -144,6 +135,7 @@ export default function ArtistDetail() {
       gig_date:         g.gig_date,
       performance_type: g.performance_type,
       hotel_price:      g.hotel_price,
+      start_time:       g.start_time || '',
       status:           g.gig_status,
       source:           g.source,
       notes:            g.gig_notes,

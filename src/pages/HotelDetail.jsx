@@ -155,6 +155,7 @@ export default function HotelDetail() {
   const summaryToGig = (g) => ({
     id: g.gig_id, hotel_id: g.hotel_id, gig_date: g.gig_date,
     performance_type: g.performance_type, hotel_price: g.hotel_price,
+    start_time: g.start_time || '',
     status: g.status, source: g.source, notes: g.notes, recurrence_note: g.recurrence_note,
   })
 
