@@ -19,7 +19,7 @@ export default function ArtistDetail() {
   const artistId  = params.get('id')
   const activeTab = params.get('tab') || 'week'
   const weekStart = params.get('week') || isoWeekStart()
-  const month     = params.get('month') || monthStart()
+  const month     = params.get('month') || currentMonth()
   const weekEnd   = addDays(weekStart, 6)
 
   // ── artist detail ────────────────────────────────────────
@@ -253,7 +253,7 @@ export default function ArtistDetail() {
               d.setMonth(d.getMonth() + 1)
               setParam('month', d.toISOString().slice(0, 7))
             }}>Next →</button>
-            <button className="btn btn-ghost btn-sm" onClick={() => setParam('month', monthStart())}>This month</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setParam('month', currentMonth())}>This month</button>
           </div>
           <ArtistPayroll
             gigs={monthGigs}

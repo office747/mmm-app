@@ -88,10 +88,5 @@ export function fmtDateLong(iso) {
   })
 }
 
-
-export function monthStart(offset = 0) {
-  const d = new Date()
-  d.setDate(1)
-  d.setMonth(d.getMonth() + offset)
-  return d.toISOString().slice(0, 7)
-}
+// alias — some files may use monthStart instead of currentMonth
+export const monthStart = currentMonth
