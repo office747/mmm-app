@@ -156,21 +156,40 @@ export default function ArtistList({ artists = [], loading, onAdd, onEdit }) {
                     <button
                       title={artist.phone ? `SMS ${artist.phone}` : 'No phone'}
                       disabled={!artist.phone || sending[`${artist.id}-sms`]}
-                      className="btn btn-ghost btn-sm"
-                      style={{ color: status[`${artist.id}-sms`]?.ok === true ? 'var(--green)' : status[`${artist.id}-sms`]?.ok === false ? 'var(--red)' : artist.phone ? 'var(--text-secondary)' : 'var(--text-muted)' }}
-                      ref={el => { if (el) el._artistId = artist.id }}
+                      className="btn btn-secondary"
+                      style={{
+                        color: status[`${artist.id}-sms`]?.ok === true ? 'var(--green)'
+                          : status[`${artist.id}-sms`]?.ok === false ? 'var(--red)'
+                          : !artist.phone ? 'var(--text-muted)' : undefined,
+                        borderColor: status[`${artist.id}-sms`]?.ok === true ? 'var(--green-border)'
+                          : status[`${artist.id}-sms`]?.ok === false ? 'var(--red-border)' : undefined,
+                        opacity: !artist.phone ? 0.4 : 1,
+                      }}
                       onClick={e => artist.phone && setPopup({ artist, type: 'sms', triggerRef: { current: e.currentTarget } })}
                     >
-                      {sending[`${artist.id}-sms`] ? '…' : '✉︎'}
+                      {sending[`${artist.id}-sms`] ? 'Sending…'
+                        : status[`${artist.id}-sms`]?.ok === true ? '✓ SMS sent'
+                        : status[`${artist.id}-sms`]?.ok === false ? '✕ SMS failed'
+                        : '✉ SMS'}
                     </button>
                     <button
                       title={artist.email ? `Email ${artist.email}` : 'No email'}
                       disabled={!artist.email || sending[`${artist.id}-email`]}
-                      className="btn btn-ghost btn-sm"
-                      style={{ color: status[`${artist.id}-email`]?.ok === true ? 'var(--green)' : status[`${artist.id}-email`]?.ok === false ? 'var(--red)' : artist.email ? 'var(--text-secondary)' : 'var(--text-muted)' }}
+                      className="btn btn-secondary"
+                      style={{
+                        color: status[`${artist.id}-email`]?.ok === true ? 'var(--green)'
+                          : status[`${artist.id}-email`]?.ok === false ? 'var(--red)'
+                          : !artist.email ? 'var(--text-muted)' : undefined,
+                        borderColor: status[`${artist.id}-email`]?.ok === true ? 'var(--green-border)'
+                          : status[`${artist.id}-email`]?.ok === false ? 'var(--red-border)' : undefined,
+                        opacity: !artist.email ? 0.4 : 1,
+                      }}
                       onClick={e => artist.email && setPopup({ artist, type: 'email', triggerRef: { current: e.currentTarget } })}
                     >
-                      {sending[`${artist.id}-email`] ? '…' : '@'}
+                      {sending[`${artist.id}-email`] ? 'Sending…'
+                        : status[`${artist.id}-email`]?.ok === true ? '✓ Email sent'
+                        : status[`${artist.id}-email`]?.ok === false ? '✕ Email failed'
+                        : '@ Email'}
                     </button>
                   </div>
                 </td>
