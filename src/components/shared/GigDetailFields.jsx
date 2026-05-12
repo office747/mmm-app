@@ -19,6 +19,17 @@ export default function GigDetailFields({ form, onChange }) {
           />
         </div>
         <div className="form-row">
+          <label>Start time</label>
+          <input
+            type="text"
+            value={form.start_time || ''}
+            onChange={e => set('start_time', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="form-grid">
+        <div className="form-row">
           <label>Hotel price €</label>
           <input
             type="number"

@@ -15,7 +15,14 @@ export default function HotelGigRow({ g, isOpen, onToggle, onEdit, onDuplicate, 
 
       <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(g.gig_date)}</td>
 
-      <td>{g.performance_type || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
+      <td>
+        {g.performance_type || <span style={{ color: 'var(--text-muted)' }}>—</span>}
+        {g.start_time && (
+          <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)', marginLeft: 6 }}>
+            {g.start_time}
+          </span>
+        )}
+      </td>
 
       <td>
         <span className={`badge ${SOURCE_BADGE[g.source] || 'badge-neutral'}`}>

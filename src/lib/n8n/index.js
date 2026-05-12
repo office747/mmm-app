@@ -9,3 +9,4 @@
 export * from './artists.js'
 export * from './invoices.js'
 export * from './hotels.js'
+export * from './notifications.js'

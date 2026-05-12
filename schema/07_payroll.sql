@@ -71,6 +71,8 @@ select
   ga.id                         as gig_artist_id,
   ga.artist_id,
   a.full_name                   as artist_name,
+  a.phone                       as artist_phone,
+  a.email                       as artist_email,
   g.id                          as gig_id,
   g.gig_date,
   g.hotel_id,

@@ -40,6 +40,7 @@ export default function UpcomingGigs({ gigs, loading }) {
                 </td>
                 <td style={{ padding: '6px 8px', borderTop: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
                   {g.performance_type || '—'}
+                  {g.start_time && <span style={{ marginLeft: 6, color: 'var(--text-muted)' }}>{g.start_time}</span>}
                 </td>
                 <td style={{ padding: '6px 0 6px 8px', borderTop: '1px solid var(--border)', textAlign: 'right' }}>
                   €{Number(g.hotel_price).toFixed(0)}

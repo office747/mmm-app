@@ -29,6 +29,7 @@ export default function GigDetailModal({
       setForm({
         performance_type: gig.performance_type || '',
         hotel_price:      gig.hotel_price      || '',
+        start_time:       gig.start_time       || '',
         status:           gig.status || gig.gig_status || 'planned',
         source:           gig.source            || 'contract',
         notes:            gig.notes || gig.gig_notes || '',
@@ -58,6 +59,7 @@ export default function GigDetailModal({
       gig_date:         gig.gig_date,
       performance_type: form.performance_type || null,
       hotel_price:      Number(form.hotel_price) || 0,
+      start_time:       form.start_time || null,
       status:           form.status,
       source:           form.source,
       notes:            form.notes || null,

@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { notifyArtistSms, notifyArtistEmail } from '../../lib/n8n/index.js'
 
 export default function ProgrammeCell({ gigs, gigArtists, onGigClick, onAddGig, showArtists }) {
   const [expanded, setExpanded] = useState(new Set())
+  const [sending,  setSending]  = useState({}) // key → true while in flight
+  const [status,   setStatus]   = useState({}) // key → { ok: bool, at: Date }
 
   const toggle = (gigId, e) => {
     e.stopPropagation()
@@ -10,6 +13,23 @@ export default function ProgrammeCell({ gigs, gigArtists, onGigClick, onAddGig, 
       next.has(gigId) ? next.delete(gigId) : next.add(gigId)
       return next
     })
+  }
+
+  const notify = async (type, artist, gig, e) => {
+    e.stopPropagation()
+    const key = `${artist.gig_artist_id}-${type}`
+    setSending(prev => ({ ...prev, [key]: true }))
+    try {
+      type === 'sms'
+        ? await notifyArtistSms(artist, gig)
+        : await notifyArtistEmail(artist, gig)
+      setStatus(prev => ({ ...prev, [key]: { ok: true, at: new Date() } }))
+    } catch (err) {
+      console.warn(`Failed to notify artist via ${type}:`, err.message)
+      setStatus(prev => ({ ...prev, [key]: { ok: false, at: new Date() } }))
+    } finally {
+      setSending(prev => ({ ...prev, [key]: false }))
+    }
   }
 
   const artistsByGig = (gigArtists || []).reduce((acc, a) => {
@@ -48,9 +68,14 @@ export default function ProgrammeCell({ gigs, gigArtists, onGigClick, onAddGig, 
                 lineHeight: 1.4,
               }}
             >
-              {/* performance name */}
+              {/* performance name + time */}
               <div style={{ fontWeight: 'var(--weight-semi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {g.performance_type || 'Performance'}
+                {g.start_time && (
+                  <span style={{ fontWeight: 'var(--weight-normal)', color: 'var(--text-secondary)', marginLeft: 4 }}>
+                    {g.start_time}
+                  </span>
+                )}
               </div>
 
               {/* price + indicators + toggle */}
@@ -105,13 +130,79 @@ export default function ProgrammeCell({ gigs, gigArtists, onGigClick, onAddGig, 
                   {artists.length === 0 ? (
                     <div style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No artists</div>
                   ) : artists.map(a => (
-                    <div key={a.gig_artist_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4, padding: '1px 0' }}>
-                      <span style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    <div key={a.gig_artist_id} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 0' }}>
+                      <span style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontSize: 'var(--text-xs)' }}>
                         {a.artist_name}
                       </span>
                       {!a.insurance_issued && (
                         <span style={{ color: 'var(--red)', fontSize: 9, flexShrink: 0, fontWeight: 'var(--weight-semi)' }}>ins!</span>
                       )}
+                      {/* SMS button */}
+                      {(() => {
+                        const key = `${a.gig_artist_id}-sms`
+                        const st  = status[key]
+                        const isSending = sending[key]
+                        const color = isSending ? 'var(--text-muted)'
+                          : st?.ok === true  ? 'var(--green)'
+                          : st?.ok === false ? 'var(--red)'
+                          : a.artist_phone   ? 'var(--text-secondary)'
+                          : 'var(--border-strong)'
+                        const border = isSending ? 'var(--border)'
+                          : st?.ok === true  ? 'var(--green-border)'
+                          : st?.ok === false ? 'var(--red-border)'
+                          : 'var(--border)'
+                        const bg = st?.ok === true ? 'var(--green-bg)'
+                          : st?.ok === false ? 'var(--red-bg)'
+                          : 'none'
+                        const title = isSending ? 'Sending…'
+                          : st?.ok === true  ? `SMS sent at ${st.at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+                          : st?.ok === false ? `SMS failed at ${st.at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} — click to retry`
+                          : a.artist_phone   ? `SMS ${a.artist_phone}`
+                          : 'No phone number'
+                        return (
+                          <button
+                            title={title}
+                            disabled={!a.artist_phone || isSending}
+                            onClick={e => notify('sms', a, g, e)}
+                            style={{ background: bg, border: `1px solid ${border}`, borderRadius: 3, cursor: a.artist_phone ? 'pointer' : 'not-allowed', padding: '1px 4px', fontSize: 9, color, flexShrink: 0, lineHeight: 1.4 }}
+                          >
+                            {isSending ? '…' : '✉︎'}
+                          </button>
+                        )
+                      })()}
+                      {/* Email button */}
+                      {(() => {
+                        const key = `${a.gig_artist_id}-email`
+                        const st  = status[key]
+                        const isSending = sending[key]
+                        const color = isSending ? 'var(--text-muted)'
+                          : st?.ok === true  ? 'var(--green)'
+                          : st?.ok === false ? 'var(--red)'
+                          : a.artist_email   ? 'var(--text-secondary)'
+                          : 'var(--border-strong)'
+                        const border = isSending ? 'var(--border)'
+                          : st?.ok === true  ? 'var(--green-border)'
+                          : st?.ok === false ? 'var(--red-border)'
+                          : 'var(--border)'
+                        const bg = st?.ok === true ? 'var(--green-bg)'
+                          : st?.ok === false ? 'var(--red-bg)'
+                          : 'none'
+                        const title = isSending ? 'Sending…'
+                          : st?.ok === true  ? `Email sent at ${st.at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+                          : st?.ok === false ? `Email failed at ${st.at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} — click to retry`
+                          : a.artist_email   ? `Email ${a.artist_email}`
+                          : 'No email'
+                        return (
+                          <button
+                            title={title}
+                            disabled={!a.artist_email || isSending}
+                            onClick={e => notify('email', a, g, e)}
+                            style={{ background: bg, border: `1px solid ${border}`, borderRadius: 3, cursor: a.artist_email ? 'pointer' : 'not-allowed', padding: '1px 4px', fontSize: 9, color, flexShrink: 0, lineHeight: 1.4 }}
+                          >
+                            {isSending ? '…' : '@'}
+                          </button>
+                        )
+                      })()}
                     </div>
                   ))}
                 </div>

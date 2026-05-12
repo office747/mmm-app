@@ -36,6 +36,7 @@ export default function TodaysGigs({ gigs, loading }) {
                 <div style={{ fontWeight: 'var(--weight-medium)', fontSize: 'var(--text-sm)' }}>{g.hotel_name}</div>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                   {g.performance_type || '—'}
+                  {g.start_time && <> · {g.start_time}</>}
                   {g.artist_count > 0 && <> · {g.artist_count} artist{g.artist_count !== 1 ? 's' : ''}</>}
                 </div>
               </div>

@@ -5,6 +5,7 @@ const EMPTY_GIG = {
   hotel_id:         '',
   performance_type: '',
   gig_date:         '',
+  start_time:       '',
   hotel_price:      '',
   status:           'planned',
   source:           'contract',
@@ -99,6 +100,7 @@ export default function GigModal({
       ...form,
       hotel_id:         form.hotel_id         || null,
       performance_type: form.performance_type || null,
+      start_time:       form.start_time       || null,
       hotel_price:      Number(form.hotel_price),
     }
     onSave({
@@ -138,6 +140,13 @@ export default function GigModal({
               <label>Date <span style={{ color: 'var(--red)' }}>*</span></label>
               <input type="date" value={form.gig_date} onChange={e => set('gig_date', e.target.value)} />
             </div>
+            <div className="form-row">
+              <label>Start time</label>
+              <input type="text" value={form.start_time || ''} onChange={e => set('start_time', e.target.value)} />
+            </div>
+          </div>
+
+          <div className="form-grid">
             <div className="form-row">
               <label>Hotel price (€) <span style={{ color: 'var(--red)' }}>*</span></label>
               <input
