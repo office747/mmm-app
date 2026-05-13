@@ -37,7 +37,7 @@ export default function ProgrammeCell({ gigs, gigArtists, onGigClick, onAddGig, 
   }, {})
 
   return (
-    <td style={{ verticalAlign: 'top', padding: 'var(--sp-1)', minWidth: 130 }}>
+    <td style={{ verticalAlign: 'top', padding: 'var(--sp-1)', overflow: 'hidden' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         {gigs.map(g => (
           <ProgrammeCellGig

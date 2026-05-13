@@ -56,7 +56,7 @@ export default function ProgrammeGrid({
       className="weekly-scroll-wrap"
       style={{ maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', overflowX: 'auto' }}
     >
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900 }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900, tableLayout: 'fixed' }}>
         <thead>
           <tr>
             {/* hotel column header — sticky top-left */}
@@ -91,6 +91,8 @@ export default function ProgrammeGrid({
                   borderBottom: `2px solid ${isToday(day) ? 'var(--brand)' : 'var(--border-strong)'}`,
                   borderLeft: '1px solid var(--border)',
                   minWidth: 130,
+                maxWidth: 130,
+                width: 130,
                   fontSize: 'var(--text-xs)',
                   fontWeight: 'var(--weight-semi)',
                   color: isToday(day) ? 'var(--brand)' : 'var(--text-secondary)',

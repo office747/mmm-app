@@ -43,7 +43,13 @@ export default function ProgrammeCellGig({
       }}
     >
       {/* performance + time */}
-      <div style={{ fontWeight: 'var(--weight-semi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <div style={{
+        fontWeight: 'var(--weight-semi)',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        maxWidth: '100%',
+      }}>
         {g.performance_type || 'Performance'}
         {g.start_time && (
           <span style={{ fontWeight: 400, color: 'var(--text-secondary)', marginLeft: 4 }}>
