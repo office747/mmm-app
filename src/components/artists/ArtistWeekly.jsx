@@ -8,7 +8,7 @@ function isToday(iso) {
   return iso === new Date().toISOString().slice(0, 10)
 }
 
-export default function ArtistWeekly({ artistId, weekStart, gigs, loading, error, onRefetch, onToggleInsurance, toggling, onEditGig }) {
+export default function ArtistWeekly({ artistId, weekStart, gigs, loading, error, onRefetch, onToggleInsurance, toggling, onEditGig, onSaveGig, savingGig, gigSaveError, clearGigError, allArtists }) {
   const navigate = useNavigate()
   const todayRef = useRef(null)
   const [selectedGig, setSelectedGig] = useState(null)
@@ -156,11 +156,15 @@ export default function ArtistWeekly({ artistId, weekStart, gigs, loading, error
       <GigDetailModal
         open={!!selectedGig}
         gig={selectedGig}
-        gigArtists={[]}
+        gigArtists={selectedGig ? gigs?.filter(g => g.gig_id === selectedGig.gig_id) : []}
+        allArtists={allArtists}
         onClose={() => setSelectedGig(null)}
+        onSave={onSaveGig}
+        saving={savingGig}
+        saveError={gigSaveError}
+        onClearError={clearGigError}
         onToggleInsurance={handleToggle}
         toggling={toggling}
-        onEditGig={onEditGig}
       />
     </div>
   )

@@ -77,6 +77,8 @@ select
   g.gig_date,
   g.hotel_id,
   h.name                        as hotel_name,
+  g.hotel_price,
+  g.start_time,
   g.performance_type,
   ga.role,
   ga.fee,
@@ -89,7 +91,8 @@ select
   ga.substituted_for,
   ga.substitution_note,
   g.status                      as gig_status,
-  g.notes                       as gig_notes
+  g.notes                       as gig_notes,
+  g.source                      as source
 from gig_artists ga
 join gigs g            on g.id  = ga.gig_id
 join artists a         on a.id  = ga.artist_id

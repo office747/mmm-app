@@ -87,13 +87,15 @@ export default function ArtistDetail() {
 
   // ── save gig ─────────────────────────────────────────────
   const { save: saveGig, saving: savingGig, saveError: gigError, clearError: clearGigError } = useSave(
-    async ({ gig, artistLines }) => {
-      const { id, ...fields } = gig
+    async (payload) => {
+      // GigModal sends { gig, artistLines }, GigDetailModal sends { gigFields, artistLines }
+      const gigData    = payload.gigFields || payload.gig
+      const artistLines = payload.artistLines || []
+      const { id, ...fields } = gigData
       if (id) {
         const { error } = await supabase.from('gigs').update(fields).eq('id', id)
         if (error) throw error
       }
-      // replace artist lines
       const gigId = id
       if (gigId) {
         await supabase.from('gig_artists').delete().eq('gig_id', gigId)
@@ -234,6 +236,11 @@ export default function ArtistDetail() {
             onToggleInsurance={toggleInsurance}
             toggling={toggling}
             onEditGig={openEditGig}
+            onSaveGig={saveGig}
+            savingGig={savingGig}
+            gigSaveError={gigError}
+            clearGigError={clearGigError}
+            allArtists={artists}
           />
         </>
       )}
