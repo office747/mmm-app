@@ -41,9 +41,14 @@ export default function Artists() {
     }
   )
 
-  const openAdd  = () => { setEditArtist(null); setModalOpen(true) }
-  const openEdit = (artist) => { setEditArtist(artist); setModalOpen(true) }
+  const openAdd    = () => { setEditArtist(null); setModalOpen(true) }
+  const openEdit   = (artist) => { setEditArtist(artist); setModalOpen(true) }
   const closeModal = () => { setModalOpen(false); setEditArtist(null); clearError() }
+
+  const deleteArtist = async (id) => {
+    await supabase.from('artists').delete().eq('id', id)
+    refetch()
+  }
 
   return (
     <div className="page">
@@ -53,6 +58,7 @@ export default function Artists() {
         error={error}
         onAdd={openAdd}
         onEdit={openEdit}
+        onDelete={deleteArtist}
       />
 
       <ArtistModal

@@ -1,16 +1,81 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { createPortal } from 'react-dom'
 import { notifyArtistSms, notifyArtistEmail } from '../../lib/n8n/index.js'
 import NotifyPopup from '../shared/NotifyPopup.jsx'
 import CopyButton from '../ui/CopyButton.jsx'
 
-export default function ArtistList({ artists = [], loading, onAdd, onEdit }) {
+function ArtistMenu({ artist, triggerRef, onEdit, onDelete, onClose }) {
+  const menuRef = useRef(null)
+
+  // position below trigger
+  const getPos = () => {
+    if (!triggerRef?.current) return { top: 0, left: 0 }
+    const r = triggerRef.current.getBoundingClientRect()
+    return { top: r.bottom + 4, left: r.right - 128 }
+  }
+  const pos = getPos()
+
+  // close on outside click
+  useEffect(() => {
+    const handler = e => {
+      if (menuRef.current && !menuRef.current.contains(e.target) &&
+          triggerRef?.current && !triggerRef.current.contains(e.target)) {
+        onClose()
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [onClose, triggerRef])
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      style={{
+        position: 'fixed',
+        top: pos.top,
+        left: pos.left,
+        width: 128,
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-strong)',
+        borderRadius: 'var(--radius)',
+        boxShadow: 'var(--shadow-md)',
+        zIndex: 1000,
+        overflow: 'hidden',
+      }}
+    >
+      <button
+        className="btn btn-ghost"
+        style={{ width: '100%', textAlign: 'left', borderRadius: 0, padding: '8px 14px', fontSize: 'var(--text-sm)' }}
+        onClick={() => { onEdit(artist); onClose() }}
+      >
+        ✏ Edit
+      </button>
+      <button
+        className="btn btn-ghost"
+        style={{ width: '100%', textAlign: 'left', borderRadius: 0, padding: '8px 14px', fontSize: 'var(--text-sm)', color: 'var(--red)' }}
+        onClick={() => {
+          onClose()
+          if (window.confirm(`Delete ${artist.full_name}? This cannot be undone.`)) {
+            onDelete(artist.id)
+          }
+        }}
+      >
+        🗑 Delete
+      </button>
+    </div>,
+    document.body
+  )
+}
+
+export default function ArtistList({ artists = [], loading, onAdd, onEdit, onDelete }) {
   const navigate = useNavigate()
   const [search,   setSearch]   = useState('')
   const [selected, setSelected] = useState(new Set())
-  const [popup,    setPopup]    = useState(null) // { artist, type, triggerRef }
+  const [popup,    setPopup]    = useState(null)
   const [sending,  setSending]  = useState({})
   const [status,   setStatus]   = useState({})
+  const [menuOpen, setMenuOpen] = useState(null) // { id, ref } | null
 
   const handleNotify = async (type, artist, message) => {
     const key = `${artist.id}-${type}`
@@ -160,48 +225,59 @@ export default function ArtistList({ artists = [], loading, onAdd, onEdit }) {
                   </span>
                 </td>
                 <td onClick={e => e.stopPropagation()}>
-                  <div className="table-actions">
-                    <button className="btn btn-ghost btn-sm" onClick={() => onEdit(artist)}>
-                      Edit
-                    </button>
-                    <button
-                      title={artist.phone ? `SMS ${artist.phone}` : 'No phone'}
-                      disabled={!artist.phone || sending[`${artist.id}-sms`]}
-                      className="btn btn-secondary"
-                      style={{
-                        color: status[`${artist.id}-sms`]?.ok === true ? 'var(--green)'
-                          : status[`${artist.id}-sms`]?.ok === false ? 'var(--red)'
-                          : !artist.phone ? 'var(--text-muted)' : undefined,
-                        borderColor: status[`${artist.id}-sms`]?.ok === true ? 'var(--green-border)'
-                          : status[`${artist.id}-sms`]?.ok === false ? 'var(--red-border)' : undefined,
-                        opacity: !artist.phone ? 0.4 : 1,
-                      }}
-                      onClick={e => artist.phone && setPopup({ artist, type: 'sms', triggerRef: { current: e.currentTarget } })}
-                    >
-                      {sending[`${artist.id}-sms`] ? 'Sending…'
-                        : status[`${artist.id}-sms`]?.ok === true ? '✓ SMS sent'
-                        : status[`${artist.id}-sms`]?.ok === false ? '✕ SMS failed'
-                        : '✉ SMS'}
-                    </button>
-                    <button
-                      title={artist.email ? `Email ${artist.email}` : 'No email'}
-                      disabled={!artist.email || sending[`${artist.id}-email`]}
-                      className="btn btn-secondary"
-                      style={{
-                        color: status[`${artist.id}-email`]?.ok === true ? 'var(--green)'
-                          : status[`${artist.id}-email`]?.ok === false ? 'var(--red)'
-                          : !artist.email ? 'var(--text-muted)' : undefined,
-                        borderColor: status[`${artist.id}-email`]?.ok === true ? 'var(--green-border)'
-                          : status[`${artist.id}-email`]?.ok === false ? 'var(--red-border)' : undefined,
-                        opacity: !artist.email ? 0.4 : 1,
-                      }}
-                      onClick={e => artist.email && setPopup({ artist, type: 'email', triggerRef: { current: e.currentTarget } })}
-                    >
-                      {sending[`${artist.id}-email`] ? 'Sending…'
-                        : status[`${artist.id}-email`]?.ok === true ? '✓ Email sent'
-                        : status[`${artist.id}-email`]?.ok === false ? '✕ Email failed'
-                        : '@ Email'}
-                    </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', justifyContent: 'space-between' }}>
+
+                    {/* left — notify buttons */}
+                    <div style={{ display: 'flex', gap: 'var(--sp-1)' }}>
+                      <button
+                        title={artist.phone ? `SMS ${artist.phone}` : 'No phone'}
+                        disabled={!artist.phone || sending[`${artist.id}-sms`]}
+                        className="btn btn-secondary btn-sm"
+                        style={{
+                          color: status[`${artist.id}-sms`]?.ok === true ? 'var(--green)' : status[`${artist.id}-sms`]?.ok === false ? 'var(--red)' : !artist.phone ? 'var(--text-muted)' : undefined,
+                          borderColor: status[`${artist.id}-sms`]?.ok === true ? 'var(--green-border)' : status[`${artist.id}-sms`]?.ok === false ? 'var(--red-border)' : undefined,
+                          opacity: !artist.phone ? 0.4 : 1,
+                        }}
+                        onClick={e => artist.phone && setPopup({ artist, type: 'sms', triggerRef: { current: e.currentTarget } })}
+                      >
+                        {sending[`${artist.id}-sms`] ? '…' : status[`${artist.id}-sms`]?.ok === true ? '✓ SMS' : status[`${artist.id}-sms`]?.ok === false ? '✕ SMS' : '✉ SMS'}
+                      </button>
+                      <button
+                        title={artist.email ? `Email ${artist.email}` : 'No email'}
+                        disabled={!artist.email || sending[`${artist.id}-email`]}
+                        className="btn btn-secondary btn-sm"
+                        style={{
+                          color: status[`${artist.id}-email`]?.ok === true ? 'var(--green)' : status[`${artist.id}-email`]?.ok === false ? 'var(--red)' : !artist.email ? 'var(--text-muted)' : undefined,
+                          borderColor: status[`${artist.id}-email`]?.ok === true ? 'var(--green-border)' : status[`${artist.id}-email`]?.ok === false ? 'var(--red-border)' : undefined,
+                          opacity: !artist.email ? 0.4 : 1,
+                        }}
+                        onClick={e => artist.email && setPopup({ artist, type: 'email', triggerRef: { current: e.currentTarget } })}
+                      >
+                        {sending[`${artist.id}-email`] ? '…' : status[`${artist.id}-email`]?.ok === true ? '✓ Email' : status[`${artist.id}-email`]?.ok === false ? '✕ Email' : '@ Email'}
+                      </button>
+                    </div>
+
+                    {/* right — 3-dot dropdown */}
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        style={{ padding: '4px 8px', letterSpacing: 1 }}
+                        ref={el => { if (el) el._menuTrigger = true }}
+                        onClick={e => setMenuOpen(menuOpen === artist.id ? null : { id: artist.id, ref: { current: e.currentTarget } })}
+                      >
+                        ···
+                      </button>
+                      {menuOpen?.id === artist.id && (
+                        <ArtistMenu
+                          artist={artist}
+                          triggerRef={menuOpen.ref}
+                          onEdit={onEdit}
+                          onDelete={onDelete}
+                          onClose={() => setMenuOpen(null)}
+                        />
+                      )}
+                    </div>
+
                   </div>
                 </td>
               </tr>
