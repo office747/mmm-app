@@ -168,3 +168,8 @@ label {
   border-top: 1px solid var(--border);
   margin: var(--sp-5) 0;
 }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.3); }
+}
