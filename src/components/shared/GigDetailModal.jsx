@@ -19,6 +19,7 @@ export default function GigDetailModal({
   onClearError,
   onToggleInsurance,
   toggling,
+  onGenerateInvoice,
 }) {
   const navigate = useNavigate()
   const [form,  setForm]  = useState({})
@@ -28,7 +29,7 @@ export default function GigDetailModal({
     if (open && gig) {
       setForm({
         performance_type: gig.performance_type || '',
-        hotel_price:      gig.hotel_price      || '',
+        hotel_price:      gig.hotel_price != null ? gig.hotel_price : '',
         start_time:       gig.start_time       || '',
         status:           gig.status || gig.gig_status || 'planned',
         source:           gig.source            || 'contract',
@@ -120,6 +121,14 @@ export default function GigDetailModal({
           >
             View hotel →
           </button>
+          {onGenerateInvoice && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => onGenerateInvoice(gig)}
+            >
+              € Invoice
+            </button>
+          )}
           <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving…' : 'Save changes'}
           </button>

@@ -4,19 +4,10 @@ import HotelGigRow from './HotelGigRow.jsx'
 import HotelGigDetail from './HotelGigDetail.jsx'
 
 export default function HotelGigs({
-  gigs,
-  gigArtists,
-  loading,
-  error,
-  onRefetch,
-  onAdd,
-  onEdit,
-  onDuplicate,
-  onCancel,
-  onDelete,
-  onStatusChange,
-  onToggleInsurance = () => {},
-  toggling = false,
+  gigs, gigArtists, loading, error, onRefetch,
+  onAdd, onEdit, onDuplicate, onViewDetail,
+  onCancel, onDelete, onStatusChange,
+  onToggleInsurance = () => {}, toggling = false,
   onGenerateInvoice,
 }) {
   const [expanded, setExpanded] = useState(new Set())
@@ -72,6 +63,7 @@ export default function HotelGigs({
                   onToggle={toggle}
                   onEdit={onEdit}
                   onDuplicate={onDuplicate}
+                  onViewDetail={onViewDetail}
                   onStatusChange={onStatusChange}
                   onGenerateInvoice={onGenerateInvoice}
                 />

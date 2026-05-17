@@ -59,8 +59,19 @@ group by
 -- ============================================================
 
 create view uninvoiced_gigs as
-select g.*
+select
+  g.id              as gig_id,
+  g.hotel_id,
+  h.name            as hotel_name,
+  g.gig_date,
+  g.performance_type,
+  g.hotel_price,
+  g.start_time,
+  g.status,
+  g.source,
+  g.notes
 from gigs g
+join hotels h on h.id = g.hotel_id
 where
   g.status = 'performed'
   and not exists (

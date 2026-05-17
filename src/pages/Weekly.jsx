@@ -1,21 +1,28 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { useSupabase } from '../hooks/useSupabase.js'
 import { useSave } from '../hooks/useSave.js'
 import { useQueryParams } from '../hooks/useQueryParams.js'
 import { useSaveToast, SaveToast } from '../components/ui/index.jsx'
 import { isoWeekStart, addDays, fmtWeekLabel } from '../lib/dates.js'
+import { triggerInvoiceGeneration } from '../lib/n8n/index.js'
 import HotelFilter from '../components/weekly/HotelFilter.jsx'
 import ProgrammeGrid from '../components/weekly/ProgrammeGrid.jsx'
 import GigModal from '../components/shared/GigModal.jsx'
 import GigDetailModal from '../components/shared/GigDetailModal.jsx'
+import InvoiceReview from '../components/shared/InvoiceReview.jsx'
 
 export default function Weekly() {
-  const { params, setParam } = useQueryParams()
+  const { params, setParam, setParams } = useQueryParams()
   const { showToast, toastVisible } = useSaveToast()
 
   const weekStart = params.get('week') || isoWeekStart()
   const weekEnd   = addDays(weekStart, 6)
+
+  // ── url param driven modal state ─────────────────────────
+  const paramGigId     = params.get('gig')
+  const paramInvoiceId = params.get('invoice')   // hotel_id for new invoice
+  const paramPreselect = params.get('preselect') // gig_id to pre-select
 
   // ── filter state ──────────────────────────────────────────
   const [hotelFilter,  setHotelFilter]  = useState('')
@@ -29,7 +36,13 @@ export default function Weekly() {
   const [editGigArtists,  setEditGigArtists]  = useState([])
 
   // ── detail modal state ────────────────────────────────────
-  const [detailGig, setDetailGig] = useState(null)
+  const [detailGig,      setDetailGig]      = useState(null)
+
+  // ── invoice modal state ───────────────────────────────────
+  const [invoiceOpen,    setInvoiceOpen]    = useState(false)
+  const [invoiceGigs,    setInvoiceGigs]    = useState([])
+  const [invoiceHotel,   setInvoiceHotel]   = useState(null)
+  const [preSelected,    setPreSelected]    = useState(null)
 
   // ── data fetching ─────────────────────────────────────────
   const { data: hotels, loading: hotelsLoading } = useSupabase(
@@ -65,6 +78,42 @@ export default function Weekly() {
     if (!detailGig || !weekGigArtists) return []
     return weekGigArtists.filter(a => a.gig_id === detailGig.gig_id)
   }, [detailGig, weekGigArtists])
+
+  // uninvoiced gigs for the hotel of the currently open gig (for invoice modal)
+  const { data: uninvoicedForHotel } = useSupabase(
+    () => invoiceHotel
+      ? supabase.from('uninvoiced_gigs').select('*').eq('hotel_id', invoiceHotel.id)
+      : Promise.resolve({ data: [], error: null }),
+    [invoiceHotel]
+  )
+
+  const { data: hotelForInvoice } = useSupabase(
+    () => invoiceHotel?.id
+      ? supabase.from('hotels').select('*, hotel_contacts(*)').eq('id', invoiceHotel.id).single()
+      : Promise.resolve({ data: null, error: null }),
+    [invoiceHotel?.id]
+  )
+
+  // ── open gig detail from ?gig=<id> ───────────────────────
+  useEffect(() => {
+    if (!paramGigId || !gigs?.length) return
+    const found = gigs.find(g => g.gig_id === paramGigId)
+    if (found && (!detailGig || detailGig.gig_id !== paramGigId)) {
+      setDetailGig(found)
+    }
+  }, [paramGigId, gigs])
+
+  // ── open invoice modal from ?invoice=<hotel_id>&preselect=<gig_id> ──
+  useEffect(() => {
+    if (!paramInvoiceId || !hotels?.length) return
+    const hotel = hotels.find(h => h.id === paramInvoiceId)
+    if (!hotel) return
+    if (!invoiceOpen) {
+      setInvoiceHotel(hotel)
+      setPreSelected(paramPreselect ? new Set([paramPreselect]) : null)
+      setInvoiceOpen(true)
+    }
+  }, [paramInvoiceId, hotels])
 
   // ── filtered hotels ───────────────────────────────────────
   const filteredHotels = useMemo(() => {
@@ -161,6 +210,42 @@ export default function Weekly() {
     },
     { onSuccess: () => { refetchGigs(); refetchArtists(); showToast() } }
   )
+
+  // ── invoice send ─────────────────────────────────────────
+  const { save: sendInvoice, saving: sending, saveError: sendError, clearError: clearSendError } = useSave(
+    async ({ hotel, gigs, emailSubject, emailBody, subtotal, vatAmount, total }) => {
+      const primaryContact = hotel.hotel_contacts?.find(c => c.is_primary) || hotel.hotel_contacts?.[0]
+      const { data: inv, error } = await supabase.from('invoices').insert({
+        hotel_id: hotel.id, invoice_type: 'regular',
+        period_start: gigs[gigs.length - 1]?.gig_date, period_end: gigs[0]?.gig_date,
+        subtotal, vat_rate: 24, vat_amount: vatAmount, total, status: 'draft',
+        sent_to_email: primaryContact?.email || null,
+      }).select().single()
+      if (error) throw error
+      await supabase.from('invoice_gigs').insert(
+        gigs.map(g => ({ invoice_id: inv.id, gig_id: g.gig_id, description: g.performance_type || 'Entertainment service', amount: Number(g.hotel_price), is_correction: false }))
+      )
+      await triggerInvoiceGeneration({
+        invoice: inv,
+        hotel: { ...hotel, primary_email: primaryContact?.email || null },
+        lineItems: gigs.map(g => ({ date: g.gig_date, description: g.performance_type || 'Entertainment service', amount: Number(g.hotel_price) })),
+        driveFolder: `${hotel.name}/Invoices/${new Date().getFullYear()}`,
+        emailSubject, emailBody,
+      })
+      await supabase.from('invoices').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', inv.id)
+      return { data: inv, error: null }
+    },
+    { onSuccess: () => { setInvoiceOpen(false); setInvoiceGigs([]); setInvoiceHotel(null); setPreSelected(null); setParams({ invoice: null, preselect: null }); refetchGigs(); showToast() } }
+  )
+
+  const openInvoiceFromGig = (gig) => {
+    const hotel = hotels?.find(h => h.id === gig.hotel_id) || { id: gig.hotel_id, name: gig.hotel_name }
+    setInvoiceHotel(hotel)
+    setPreSelected(new Set([gig.gig_id]))
+    setDetailGig(null)
+    setInvoiceOpen(true)
+    setParams({ invoice: gig.hotel_id, preselect: gig.gig_id, gig: null })
+  }
 
   // ── toggle insurance ──────────────────────────────────────
   const { save: toggleInsurance, saving: toggling } = useSave(
@@ -275,7 +360,7 @@ export default function Weekly() {
         loading={loading}
         error={gigsError}
         onRefetch={refetchGigs}
-        onGigClick={setDetailGig}
+        onGigClick={g => { setDetailGig(g); setParam('gig', g.gig_id) }}
         onAddGig={openAddGig}
       />
 
@@ -285,14 +370,14 @@ export default function Weekly() {
         gig={detailGig}
         gigArtists={detailGigArtists}
         allArtists={artists}
-        onClose={() => { setDetailGig(null); clearFieldsError() }}
+        onClose={() => { setDetailGig(null); setParam('gig', null); clearFieldsError() }}
         onSave={saveGigFields}
         saving={savingFields}
         saveError={fieldsError}
         onClearError={clearFieldsError}
         onToggleInsurance={toggleInsurance}
         toggling={toggling}
-        onEditGig={openEditGig}
+        onGenerateInvoice={detailGig?.status === 'performed' && detailGig?.needs_invoicing ? openInvoiceFromGig : null}
       />
 
       {/* gig add/edit modal */}
@@ -311,6 +396,20 @@ export default function Weekly() {
       />
 
       {toastVisible && <SaveToast message="Saved" />}
+
+      <InvoiceReview
+        open={invoiceOpen}
+        hotel={hotelForInvoice || invoiceHotel}
+        gigs={uninvoicedForHotel || (invoiceGigs.length ? invoiceGigs : [])}
+        preSelected={preSelected}
+        isPty={false}
+        originalInvoice={null}
+        onConfirm={sendInvoice}
+        onClose={() => { setInvoiceOpen(false); setInvoiceHotel(null); setPreSelected(null); setParams({ invoice: null, preselect: null }); clearSendError() }}
+        sending={sending}
+        sendError={sendError}
+        onClearError={clearSendError}
+      />
     </div>
   )
 }

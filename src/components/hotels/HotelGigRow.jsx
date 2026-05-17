@@ -1,6 +1,6 @@
 import { fmtDate, STATUS_BG, STATUS_COLOR, STATUS_BORDER, SOURCE_BADGE, SOURCE_LABEL } from './gigConstants.js'
 
-export default function HotelGigRow({ g, isOpen, onToggle, onEdit, onDuplicate, onStatusChange, onGenerateInvoice }) {
+export default function HotelGigRow({ g, isOpen, onToggle, onEdit, onDuplicate, onViewDetail, onStatusChange, onGenerateInvoice }) {
   const margin = Number(g.mmm_margin)
 
   return (
@@ -83,6 +83,9 @@ export default function HotelGigRow({ g, isOpen, onToggle, onEdit, onDuplicate, 
         <div className="table-actions">
           <button className="btn btn-ghost btn-sm" onClick={() => onEdit(g)}>Edit</button>
           <button className="btn btn-ghost btn-sm" onClick={() => onDuplicate(g)}>Copy</button>
+          {onViewDetail && (
+            <button className="btn btn-ghost btn-sm" onClick={() => onViewDetail(g)}>Details</button>
+          )}
           {g.status === 'performed' && g.needs_invoicing && (
             <button className="btn btn-primary btn-sm" onClick={() => onGenerateInvoice(g)}>
               Invoice

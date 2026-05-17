@@ -27,14 +27,16 @@ create table invoices (
   total                numeric(10,2) not null default 0,
 
   status               text not null default 'draft'
-                         check (status in ('draft', 'sent', 'paid', 'cancelled')),
+                         check (status in ('draft', 'uploaded', 'sent', 'paid', 'cancelled')),
 
   -- entersoft integration
-  entersoft_invoice_id text,          -- ID returned by Entersoft API after creation
+  entersoft_invoice_id text,
   entersoft_synced_at  timestamptz,
 
   -- google drive
-  drive_url            text,          -- link to the PDF in Drive
+  drive_url            text,
+  drive_filename       text,    -- display name for the uploaded file
+  uploaded_at          timestamptz,
 
   -- email
   sent_to_email        text,
@@ -109,10 +111,13 @@ select
   i.status,
   i.entersoft_invoice_id,
   i.drive_url,
+  i.drive_filename,
+  i.uploaded_at,
   i.sent_to_email,
   i.sent_at,
   i.paid_at,
   count(ig.id)                   as gig_count,
+  i.notes,
   i.created_at
 from invoices i
 join hotels h on h.id = i.hotel_id

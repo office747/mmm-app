@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { useSupabase } from '../hooks/useSupabase.js'
 import { useSave } from '../hooks/useSave.js'
@@ -11,6 +11,7 @@ import HotelPeriodNav from '../components/hotels/HotelPeriodNav.jsx'
 import HotelGigs from '../components/hotels/HotelGigs.jsx'
 import HotelInvoices from '../components/hotels/HotelInvoices.jsx'
 import GigModal from '../components/shared/GigModal.jsx'
+import GigDetailModal from '../components/shared/GigDetailModal.jsx'
 import InvoiceReview from '../components/shared/InvoiceReview.jsx'
 
 import { isoWeekStart, addDays, monthRange, currentMonth } from '../lib/dates.js'
@@ -18,7 +19,7 @@ import { isoWeekStart, addDays, monthRange, currentMonth } from '../lib/dates.js
 
 
 export default function HotelDetail() {
-  const { params, setParam } = useQueryParams()
+  const { params, setParam, setParams } = useQueryParams()
   const { showToast, toastVisible } = useSaveToast()
 
   const hotelId    = params.get('id')
@@ -26,6 +27,7 @@ export default function HotelDetail() {
   const periodMode = params.get('period') || 'week'
   const weekStart  = params.get('week')   || isoWeekStart()
   const month      = params.get('month')  || currentMonth()
+  const paramGigId = params.get('gig')
 
   const weekEnd             = addDays(weekStart, 6)
   const { start: mStart, end: mEnd } = monthRange(month)
@@ -37,6 +39,7 @@ export default function HotelDetail() {
   const [gigModalOpen,    setGigModalOpen]    = useState(false)
   const [editGig,         setEditGig]         = useState(null)
   const [editGigArtists,  setEditGigArtists]  = useState([])
+  const [detailGig,       setDetailGig]       = useState(null)
   const [invoiceOpen,     setInvoiceOpen]     = useState(false)
   const [invoiceGigs,     setInvoiceGigs]     = useState([])
   const [invoicePreSelected, setPreSelected]  = useState(null)
@@ -151,7 +154,12 @@ export default function HotelDetail() {
     { onSuccess: () => { refetchArtists(); showToast() } }
   )
 
-  // ── gig modal helpers ─────────────────────────────────────
+  // ── open gig detail from ?gig=<id> ───────────────────────
+  useEffect(() => {
+    if (!paramGigId || !gigs?.length) return
+    const found = gigs.find(g => g.gig_id === paramGigId)
+    if (found) openEditGig(found)
+  }, [paramGigId, gigs])
   const summaryToGig = (g) => ({
     id: g.gig_id, hotel_id: g.hotel_id, gig_date: g.gig_date,
     performance_type: g.performance_type, hotel_price: g.hotel_price,
@@ -160,8 +168,9 @@ export default function HotelDetail() {
   })
 
   const openAddGig    = () => { setEditGig(null); setEditGigArtists([]); setGigModalOpen(true) }
-  const openEditGig   = (g) => { setEditGig(summaryToGig(g)); setEditGigArtists((gigArtists || []).filter(a => a.gig_id === g.gig_id)); setGigModalOpen(true) }
+  const openEditGig   = (g) => { setEditGig(summaryToGig(g)); setEditGigArtists((gigArtists || []).filter(a => a.gig_id === g.gig_id)); setGigModalOpen(true); setParam('gig', g.gig_id) }
   const openDuplicate = (g) => { setEditGig({ ...summaryToGig(g), id: null, gig_date: '' }); setEditGigArtists((gigArtists || []).filter(a => a.gig_id === g.gig_id)); setGigModalOpen(true) }
+  const openDetailGig = (g) => setDetailGig(g)
 
   // ── invoice handlers ──────────────────────────────────────
   const { save: sendInvoice, saving: sending, saveError: sendError, clearError: clearSendError } = useSave(
@@ -253,6 +262,7 @@ export default function HotelDetail() {
             onAdd={openAddGig}
             onEdit={openEditGig}
             onDuplicate={openDuplicate}
+            onViewDetail={openDetailGig}
             onCancel={cancelGig}
             onDelete={deleteGig}
             onStatusChange={changeGigStatus}
@@ -272,7 +282,22 @@ export default function HotelDetail() {
           onRefetch={refetchInvoices}
           onGenerate={(gigs) => { setInvoiceGigs(gigs); setPreSelected(null); setIsPty(false); setOriginalInvoice(null); setInvoiceOpen(true) }}
           onCreatePty={(inv) => { setInvoiceGigs(uninvoiced || []); setPreSelected(null); setIsPty(true); setOriginalInvoice(inv); setInvoiceOpen(true) }}
-          onMarkPaid={async (id) => { await supabase.from('invoices').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', id); refetchInvoices(); showToast() }}
+          onUpdate={async (id, fields) => { await supabase.from('invoices').update(fields).eq('id', id); refetchInvoices(); showToast() }}
+          onDelete={async (id) => { await supabase.from('invoices').delete().eq('id', id); refetchInvoices() }}
+          onViewGig={async (row) => {
+            // look in current period first
+            let found = (gigs || []).find(g => g.gig_id === row.gig_id)
+            if (!found) {
+              // gig outside current period — fetch directly
+              const { data } = await supabase
+                .from('gig_summary')
+                .select('*')
+                .eq('gig_id', row.gig_id)
+                .single()
+              found = data
+            }
+            if (found) setDetailGig(found)
+          }}
         />
       )}
 
@@ -283,7 +308,7 @@ export default function HotelDetail() {
         hotelId={hotelId}
         artists={artists}
         onSave={saveGig}
-        onClose={() => { setGigModalOpen(false); setEditGig(null); clearGigError() }}
+        onClose={() => { setGigModalOpen(false); setEditGig(null); setParam('gig', null); clearGigError() }}
         saving={savingGig}
         saveError={gigError}
         onClearError={clearGigError}
@@ -304,6 +329,40 @@ export default function HotelDetail() {
       />
 
       {toastVisible && <SaveToast message="Saved" />}
+
+      <GigDetailModal
+        open={!!detailGig}
+        gig={detailGig}
+        gigArtists={detailGig ? (gigArtists || []).filter(a => a.gig_id === detailGig.gig_id) : []}
+        allArtists={artists}
+        onClose={() => setDetailGig(null)}
+        onSave={async ({ gigFields, artistLines }) => {
+          const { id, ...rest } = gigFields
+          await supabase.from('gigs').update(rest).eq('id', id)
+          if (artistLines) {
+            await supabase.from('gig_artists').delete().eq('gig_id', id)
+            if (artistLines.length) {
+              await supabase.from('gig_artists').insert(
+                artistLines.map(l => ({
+                  gig_id: id, artist_id: l.artist_id,
+                  role: l.role || null,
+                  fee: Number(l.fee) || 0,
+                  transport_amount: Number(l.transport_amount) || 0,
+                  insurance_amount: Number(l.insurance_amount) || 0,
+                  insurance_issued: l.insurance_issued || false,
+                }))
+              )
+            }
+          }
+          setDetailGig(null)
+          refetchGigs()
+          refetchArtists()
+          showToast()
+        }}
+        onToggleInsurance={toggleInsurance}
+        toggling={toggling}
+        onGenerateInvoice={detailGig?.status === 'performed' && detailGig?.needs_invoicing ? openInvoiceFromGig : null}
+      />
     </div>
   )
 }

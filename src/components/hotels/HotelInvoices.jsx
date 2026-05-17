@@ -1,32 +1,56 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { LoadingSpinner, ErrorBanner } from '../ui/index.jsx'
-import { fmtDateLong as fmtDate } from '../../lib/dates.js'
-
+import { fmtDate } from '../../lib/dates.js'
+import { supabase } from '../../lib/supabase.js'
+import InvoiceDetail from './InvoiceDetail.jsx'
+import InvoiceDetailSkeleton from './InvoiceDetailSkeleton.jsx'
 
 const STATUS_BADGE = {
   draft:     'badge-neutral',
-  sent:      'badge-blue',
+  uploaded:  'badge-blue',
+  sent:      'badge-amber',
   paid:      'badge-green',
   cancelled: 'badge-red',
 }
 
 export default function HotelInvoices({
-  invoices,
-  uninvoicedGigs,
-  loading,
-  error,
-  onRefetch,
-  onGenerate,
-  onCreatePty,
-  onMarkPaid,
+  invoices, uninvoicedGigs, loading, error, onRefetch,
+  onGenerate, onCreatePty, onUpdate, onDelete, onViewGig,
 }) {
-  const [expandedInv, setExpanded] = useState(new Set())
+  const [expanded,    setExpanded]    = useState(new Set())
+  const [gigsByInv,   setGigsByInv]   = useState({})
+  const [loadingGigs, setLoadingGigs] = useState(new Set())
 
-  const toggle = (id) => setExpanded(prev => {
-    const next = new Set(prev)
-    next.has(id) ? next.delete(id) : next.add(id)
-    return next
-  })
+  const toggle = async (invId) => {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      if (next.has(invId)) {
+        next.delete(invId)
+        return next
+      }
+      next.add(invId)
+      return next
+    })
+
+    // fetch gigs if not already loaded
+    if (!gigsByInv[invId]) {
+      setLoadingGigs(prev => new Set([...prev, invId]))
+      const { data } = await supabase
+        .from('invoice_gigs')
+        .select('*, gigs(gig_date, performance_type)')
+        .eq('invoice_id', invId)
+        .order('created_at')
+      setGigsByInv(prev => ({
+        ...prev,
+        [invId]: (data || []).map(g => ({
+          ...g,
+          gig_date:         g.gigs?.gig_date,
+          performance_type: g.gigs?.performance_type,
+        }))
+      }))
+      setLoadingGigs(prev => { const next = new Set(prev); next.delete(invId); return next })
+    }
+  }
 
   if (loading) return <LoadingSpinner message="Loading invoices…" />
   if (error)   return <ErrorBanner message={error} onRetry={onRefetch} />
@@ -49,29 +73,27 @@ export default function HotelInvoices({
         <table>
           <thead>
             <tr>
-              <th style={{ width: 24 }}></th>
+              <th style={{ width: 24 }} />
               <th>Invoice #</th>
               <th>Type</th>
               <th>Period</th>
               <th>Gigs</th>
-              <th>Subtotal</th>
-              <th>VAT 24%</th>
+              <th>Net</th>
+              <th>VAT</th>
               <th>Total</th>
               <th>Status</th>
-              <th>Sent</th>
-              <th>Paid</th>
+              <th>File</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {(invoices || []).length === 0 ? (
-              <tr><td colSpan={12} className="empty-state">No invoices yet.</td></tr>
-            ) : (invoices || []).map(inv => {
-              const isOpen = expandedInv.has(inv.id)
+            {!(invoices?.length) ? (
+              <tr><td colSpan={11} className="empty-state">No invoices yet.</td></tr>
+            ) : invoices.map(inv => {
+              const isOpen = expanded.has(inv.id)
               return (
-                <>
+                <React.Fragment key={inv.id}>
                   <tr
-                    key={inv.id}
                     style={{ cursor: 'pointer' }}
                     onClick={() => toggle(inv.id)}
                     className={inv.status === 'cancelled' ? 'row-cancelled' : ''}
@@ -95,41 +117,38 @@ export default function HotelInvoices({
                     <td>€{Number(inv.subtotal).toFixed(2)}</td>
                     <td style={{ color: 'var(--text-secondary)' }}>€{Number(inv.vat_amount).toFixed(2)}</td>
                     <td style={{ fontWeight: 'var(--weight-semi)' }}>€{Number(inv.total).toFixed(2)}</td>
-                    <td><span className={`badge ${STATUS_BADGE[inv.status] || 'badge-neutral'}`}>{inv.status}</span></td>
-                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{fmtDate(inv.sent_at)}</td>
-                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{fmtDate(inv.paid_at)}</td>
+                    <td>
+                      <span className={`badge ${STATUS_BADGE[inv.status] || 'badge-neutral'}`}>
+                        {inv.status}
+                      </span>
+                    </td>
+                    <td>
+                      {inv.drive_url
+                        ? <span style={{ color: 'var(--green)', fontSize: 'var(--text-xs)' }}>📄 {inv.drive_filename || 'File'}</span>
+                        : <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>—</span>
+                      }
+                    </td>
                     <td onClick={e => e.stopPropagation()}>
                       <div className="table-actions">
-                        {inv.drive_url && (
-                          <a href={inv.drive_url} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm">📄</a>
-                        )}
-                        {inv.status === 'sent' && (
-                          <button className="btn btn-ghost btn-sm" onClick={() => onMarkPaid(inv.id)}>Mark paid</button>
-                        )}
-                        {inv.status !== 'cancelled' && inv.status !== 'draft' && (
+                        {inv.status !== 'cancelled' && (
                           <button className="btn btn-ghost btn-sm" onClick={() => onCreatePty(inv)}>PTY</button>
                         )}
                       </div>
                     </td>
                   </tr>
 
-                  {/* expanded invoice detail */}
                   {isOpen && (
-                    <tr key={`${inv.id}-detail`}>
-                      <td colSpan={12} style={{ padding: 0, borderBottom: '1px solid var(--border)' }}>
-                        <div className="row-detail-inner">
-                          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                            {inv.sent_to_email && <div>Sent to: <strong>{inv.sent_to_email}</strong></div>}
-                            {inv.entersoft_invoice_id && <div>Entersoft ID: <code>{inv.entersoft_invoice_id}</code></div>}
-                            {inv.invoice_type === 'pty' && inv.corrects_invoice_id && (
-                              <div>Corrects invoice: <code>{inv.corrects_invoice_id}</code></div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
+                    loadingGigs.has(inv.id)
+                      ? <InvoiceDetailSkeleton />
+                      : <InvoiceDetail
+                          inv={inv}
+                          gigs={gigsByInv[inv.id]}
+                          onUpdate={async (id, fields) => { await onUpdate(id, fields); onRefetch() }}
+                          onDelete={async (id) => { await onDelete(id); onRefetch(); setExpanded(prev => { const next = new Set(prev); next.delete(id); return next }) }}
+                          onViewGig={onViewGig}
+                        />
                   )}
-                </>
+                </React.Fragment>
               )
             })}
           </tbody>
