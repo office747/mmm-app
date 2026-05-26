@@ -333,8 +333,9 @@ tbody tr.row-summary td {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  width: 540px;
-  max-width: 100%;
+  width: 60vw;
+  min-width: 400px;
+  max-width: 900px;
   max-height: 90vh;
   overflow-y: auto;
   animation: slideUp 200ms var(--ease);

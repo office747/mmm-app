@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { SaveError } from '../ui/index.jsx'
+import ArtistSearchSelect from './ArtistSearchSelect.jsx'
 
 const EMPTY_GIG = {
   hotel_id:         '',
@@ -241,10 +242,11 @@ export default function GigModal({
             }}>
               <div className="form-row" style={{ marginBottom: 0 }}>
                 {i === 0 && <label>Artist</label>}
-                <select value={line.artist_id} onChange={e => setLine(i, 'artist_id', e.target.value)}>
-                  <option value="">— select —</option>
-                  {(artists || []).map(a => <option key={a.id} value={a.id}>{a.full_name}</option>)}
-                </select>
+                <ArtistSearchSelect
+                  value={line.artist_id}
+                  artists={artists}
+                  onChange={id => setLine(i, 'artist_id', id)}
+                />
               </div>
               <div className="form-row" style={{ marginBottom: 0 }}>
                 {i === 0 && <label>Role</label>}

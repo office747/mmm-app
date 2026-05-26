@@ -73,7 +73,7 @@ export default function GigDetailModal({
 
   return (
     <div className="modal-overlay open" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="modal" style={{ width: 580 }}>
+      <div className="modal">
 
         <div className="modal-header">
           <div>
