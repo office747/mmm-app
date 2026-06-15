@@ -1,0 +1,10 @@
+### POST auth
+POST https://einvoiceapi.impact.gr/Authentication/login
+Content-Type: application/json
+
+{
+  "vat": "802452038",
+  "key": "0dab8c77-1e9f-4ad8-b3fa-30c172c1fa22"
+}
+
+###

@@ -29,12 +29,13 @@ const RECURRENCE_OPTIONS = [
 
 export default function GigModal({
   open,
-  gig,              // null = add, object = edit
-  gigArtists,       // existing artist lines when editing
-  hotels,           // for hotel selector (weekly view needs this)
-  hotelId,          // pre-selected hotel (when opened from hotel view)
-  performanceTypes, // types for selected hotel
-  artists,          // all active artists for selector
+  gig,
+  gigArtists,
+  hotels,
+  hotelId,
+  performanceTypes,
+  artists,
+  defaultRecurUntil, // default until date for recurrence (e.g. hotel season end)
   onSave,
   onClose,
   saving,
@@ -67,7 +68,7 @@ export default function GigModal({
         setLines([{ ...EMPTY_ARTIST_LINE }])
       }
       setRecur('none')
-      setUntil('')
+      setUntil(defaultRecurUntil || '')
       setPreview(null)
     }
   }, [open, gig, gigArtists, hotelId])

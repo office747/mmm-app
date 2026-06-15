@@ -404,11 +404,32 @@ export default function Weekly() {
         preSelected={preSelected}
         isPty={false}
         originalInvoice={null}
-        onConfirm={sendInvoice}
-        onClose={() => { setInvoiceOpen(false); setInvoiceHotel(null); setPreSelected(null); setParams({ invoice: null, preselect: null }); clearSendError() }}
-        sending={sending}
-        sendError={sendError}
-        onClearError={clearSendError}
+        onUpload={async (payload) => {
+          try {
+            const hotel = hotelForInvoice || invoiceHotel
+            const primaryContact = hotel?.hotel_contacts?.find(c => c.is_primary) || hotel?.hotel_contacts?.[0]
+            const { data: inv, error } = await supabase.from('invoices').insert({
+              hotel_id: hotel.id, invoice_type: 'regular',
+              period_start: payload.gigs[payload.gigs.length - 1]?.gig_date,
+              period_end:   payload.gigs[0]?.gig_date,
+              subtotal: payload.subtotal, vat_rate: 24, vat_amount: payload.vatAmount, total: payload.total,
+              status: 'draft', sent_to_email: primaryContact?.email || null,
+            }).select().single()
+            if (error) throw error
+            await supabase.from('invoice_gigs').insert(
+              payload.gigs.map(g => ({ invoice_id: inv.id, gig_id: g.gig_id, description: g.performance_type || 'Entertainment service', amount: Number(g.hotel_price), is_correction: false }))
+            )
+            setInvoiceOpen(false)
+            setInvoiceHotel(null)
+            setPreSelected(null)
+            setParams({ invoice: null, preselect: null })
+            refetchGigs()
+            showToast()
+          } catch (err) { console.error('Failed to create invoice:', err) }
+        }}
+        onConfirm={() => {}}
+        onClose={() => { setInvoiceOpen(false); setInvoiceHotel(null); setPreSelected(null); setParams({ invoice: null, preselect: null }) }}
+        saving={false}
       />
     </div>
   )

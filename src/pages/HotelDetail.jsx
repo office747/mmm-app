@@ -169,40 +169,80 @@ export default function HotelDetail() {
 
   const openAddGig    = () => { setEditGig(null); setEditGigArtists([]); setGigModalOpen(true) }
   const openEditGig   = (g) => { setEditGig(summaryToGig(g)); setEditGigArtists((gigArtists || []).filter(a => a.gig_id === g.gig_id)); setGigModalOpen(true); setParam('gig', g.gig_id) }
-  const openDuplicate = (g) => { setEditGig({ ...summaryToGig(g), id: null, gig_date: '' }); setEditGigArtists((gigArtists || []).filter(a => a.gig_id === g.gig_id)); setGigModalOpen(true) }
+  const openDuplicate = (g) => {
+    const nextDate = addDays(g.gig_date, 7)
+    setEditGig({ ...summaryToGig(g), id: null, gig_date: nextDate })
+    setEditGigArtists((gigArtists || []).filter(a => a.gig_id === g.gig_id))
+    setGigModalOpen(true)
+  }
   const openDetailGig = (g) => setDetailGig(g)
 
   // ── invoice handlers ──────────────────────────────────────
-  const { save: sendInvoice, saving: sending, saveError: sendError, clearError: clearSendError } = useSave(
-    async ({ hotel, gigs, isPty, originalInvoice, emailSubject, emailBody, subtotal, vatAmount, total }) => {
-      const primaryContact = hotel.hotel_contacts?.find(c => c.is_primary) || hotel.hotel_contacts?.[0]
-      const { data: inv, error } = await supabase.from('invoices').insert({
-        hotel_id: hotel.id, invoice_type: isPty ? 'pty' : 'regular',
-        corrects_invoice_id: isPty ? originalInvoice?.id : null,
-        period_start: gigs[gigs.length - 1]?.gig_date, period_end: gigs[0]?.gig_date,
-        subtotal, vat_rate: 24, vat_amount: vatAmount, total, status: 'draft',
-        sent_to_email: primaryContact?.email || null,
-      }).select().single()
-      if (error) throw error
-      await supabase.from('invoice_gigs').insert(
-        gigs.map(g => ({ invoice_id: inv.id, gig_id: g.gig_id, description: g.performance_type || 'Entertainment service', amount: Number(g.hotel_price), is_correction: isPty }))
-      )
-      const payload = {
-        invoice: inv,
-        hotel: { ...hotel, primary_email: primaryContact?.email || null },
-        lineItems: gigs.map(g => ({ date: g.gig_date, description: g.performance_type || 'Entertainment service', amount: Number(g.hotel_price) })),
-        driveFolder: `${hotel.name}/Invoices/${new Date().getFullYear()}`,
-        emailSubject, emailBody,
-      }
-      isPty ? await triggerPtyGeneration({ ...payload, originalInvoice }) : await triggerInvoiceGeneration(payload)
-      await supabase.from('invoices').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', inv.id)
-      return { data: inv, error: null }
-    },
-    { onSuccess: () => { setInvoiceOpen(false); setInvoiceGigs([]); setPreSelected(null); refetchInvoices(); refetchGigs(); showToast() } }
-  )
+  // ── create invoice record ────────────────────────────────
+  const createInvoiceRecord = async ({ hotel, gigs, isPty, originalInvoice, subtotal, vatAmount, total }) => {
+    const primaryContact = hotel.hotel_contacts?.find(c => c.is_primary) || hotel.hotel_contacts?.[0]
+    const { data: inv, error } = await supabase.from('invoices').insert({
+      hotel_id: hotel.id, invoice_type: isPty ? 'pty' : 'regular',
+      corrects_invoice_id: isPty ? originalInvoice?.id : null,
+      period_start: gigs[gigs.length - 1]?.gig_date,
+      period_end:   gigs[0]?.gig_date,
+      subtotal, vat_rate: 24, vat_amount: vatAmount, total,
+      status: 'draft',
+      sent_to_email: primaryContact?.email || null,
+    }).select().single()
+    if (error) throw error
+    await supabase.from('invoice_gigs').insert(
+      gigs.map(g => ({ invoice_id: inv.id, gig_id: g.gig_id, description: g.performance_type || 'Entertainment service', amount: Number(g.hotel_price), is_correction: isPty }))
+    )
+    return inv
+  }
 
-  const openInvoiceFromGig = (gig) => {
-    const all = uninvoiced || []
+  const handleUpload = async (payload) => {
+    try {
+      const inv = await createInvoiceRecord(payload)
+      // if file provided, upload it via n8n
+      if (payload.file) {
+        const base64 = await new Promise((res, rej) => {
+          const reader = new FileReader()
+          reader.onload  = () => res(reader.result.split(',')[1])
+          reader.onerror = rej
+          reader.readAsDataURL(payload.file)
+        })
+        const { triggerWebhook } = await import('../lib/n8n/base.js')
+        const result = await triggerWebhook('upload-invoice', {
+          invoice: { id: inv.id, invoice_number: inv.invoice_number || null, hotel_id: hotel.id, hotel_name: hotel.name, period_start: inv.period_start, period_end: inv.period_end },
+          file: { name: payload.file.name, type: payload.file.type, size: payload.file.size, base64 },
+          drive_folder: `${hotel.name}/Invoices/${new Date(inv.period_start).getFullYear()}`,
+          triggered_at: new Date().toISOString(),
+        })
+        const driveUrl      = result?.drive_url || result?.data?.drive_url
+          || (result?.googleDriveFileId ? `https://drive.google.com/file/d/${result.googleDriveFileId}/view` : null)
+        const driveFilename = result?.drive_filename || result?.data?.drive_filename || result?.uploadedFile || payload.file.name
+        if (driveUrl) {
+          await supabase.from('invoices').update({ drive_url: driveUrl, drive_filename: driveFilename, uploaded_at: new Date().toISOString(), status: 'uploaded' }).eq('id', inv.id)
+        }
+      }
+      setInvoiceOpen(false)
+      setInvoiceGigs([])
+      setPreSelected(null)
+      refetchInvoices()
+      refetchGigs()
+      showToast()
+      setParam('tab', 'invoices')
+    } catch (err) {
+      throw err // re-throw so InvoiceReview can show the error
+    }
+  }
+
+  const openInvoiceFromGig = async (gig) => {
+    // always fetch fresh to avoid stale state
+    const { data: freshUninvoiced } = await supabase
+      .from('uninvoiced_gigs')
+      .select('*')
+      .eq('hotel_id', hotelId)
+      .order('gig_date')
+
+    const all = freshUninvoiced || []
     let preSelected
     if (hotel?.billing_cycle === 'weekly') {
       const gigDate = new Date(gig.gig_date)
@@ -280,7 +320,10 @@ export default function HotelDetail() {
           loading={invLoading}
           error={invError}
           onRefetch={refetchInvoices}
-          onGenerate={(gigs) => { setInvoiceGigs(gigs); setPreSelected(null); setIsPty(false); setOriginalInvoice(null); setInvoiceOpen(true) }}
+          onGenerate={async () => {
+            const { data: fresh } = await supabase.from('uninvoiced_gigs').select('*').eq('hotel_id', hotelId).order('gig_date')
+            setInvoiceGigs(fresh || []); setPreSelected(null); setIsPty(false); setOriginalInvoice(null); setInvoiceOpen(true)
+          }}
           onCreatePty={(inv) => { setInvoiceGigs(uninvoiced || []); setPreSelected(null); setIsPty(true); setOriginalInvoice(inv); setInvoiceOpen(true) }}
           onUpdate={async (id, fields) => { await supabase.from('invoices').update(fields).eq('id', id); refetchInvoices(); showToast() }}
           onDelete={async (id) => { await supabase.from('invoices').delete().eq('id', id); refetchInvoices() }}
@@ -307,6 +350,7 @@ export default function HotelDetail() {
         gigArtists={editGigArtists}
         hotelId={hotelId}
         artists={artists}
+        defaultRecurUntil={hotel?.season_end || ''}
         onSave={saveGig}
         onClose={() => { setGigModalOpen(false); setEditGig(null); setParam('gig', null); clearGigError() }}
         saving={savingGig}
@@ -321,11 +365,10 @@ export default function HotelDetail() {
         preSelected={invoicePreSelected}
         isPty={isPty}
         originalInvoice={originalInvoice}
-        onConfirm={sendInvoice}
-        onClose={() => { setInvoiceOpen(false); setPreSelected(null); clearSendError() }}
-        sending={sending}
-        sendError={sendError}
-        onClearError={clearSendError}
+        onUpload={handleUpload}
+        onConfirm={() => {}} // generate invoice — not implemented yet
+        onClose={() => { setInvoiceOpen(false); setPreSelected(null) }}
+        saving={false}
       />
 
       {toastVisible && <SaveToast message="Saved" />}
