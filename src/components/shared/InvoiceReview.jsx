@@ -22,7 +22,13 @@ export default function InvoiceReview({
 
   useEffect(() => {
     if (open && gigs?.length) {
-      setSelected(preSelected instanceof Set ? preSelected : new Set(gigs.map(g => g.gig_id)))
+      if (preSelected instanceof Set) {
+        setSelected(preSelected)
+      } else if (gigs.length <= 5) {
+        setSelected(new Set(gigs.map(g => g.gig_id)))
+      } else {
+        setSelected(new Set())
+      }
     }
     if (!open) { setUploadError(null); setUploading(false) }
   }, [open, gigs, preSelected])
@@ -74,7 +80,17 @@ export default function InvoiceReview({
           </div>
 
           {/* gig selector */}
-          <div className="section-label">Select gigs to include</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="section-label">Select gigs to include</div>
+            {(gigs?.length || 0) > 0 && (
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setSelected(selected.size === gigs.length ? new Set() : new Set(gigs.map(g => g.gig_id)))}
+              >
+                {selected.size === gigs.length ? 'Select none' : 'Select all'}
+              </button>
+            )}
+          </div>
           <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: 'var(--sp-4)' }}>
             {!(gigs?.length) ? (
               <div style={{ padding: 'var(--sp-4)', color: 'var(--text-muted)', fontSize: 'var(--text-sm)', textAlign: 'center' }}>

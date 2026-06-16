@@ -27,6 +27,10 @@ export default function Weekly() {
   // ── filter state ──────────────────────────────────────────
   const [hotelFilter,  setHotelFilter]  = useState('')
   const [showArtists,  setShowArtists]  = useState(false)
+  const [filterUninvoiced, setFilterUninvoiced] = useState(false)
+  const [filterInvoiced,   setFilterInvoiced]   = useState(false)
+  const [filterNoArtist,   setFilterNoArtist]   = useState(false)
+  const [filterUninsured,  setFilterUninsured]  = useState(false)
 
   // ── gig modal state ───────────────────────────────────────
   const [gigModalOpen,    setGigModalOpen]    = useState(false)
@@ -122,6 +126,33 @@ export default function Weekly() {
     if (!q) return hotels
     return hotels.filter(h => h.name.toLowerCase().includes(q))
   }, [hotels, hotelFilter])
+
+  // ── apply gig-level view filters ──────────────────────────
+  const filteredGigs = useMemo(() => {
+    if (!gigs) return gigs
+    const anyFilterActive = filterUninvoiced || filterInvoiced || filterNoArtist || filterUninsured
+    if (!anyFilterActive) return gigs
+
+    const artistsByGig = (weekGigArtists || []).reduce((acc, a) => {
+      if (!acc[a.gig_id]) acc[a.gig_id] = []
+      acc[a.gig_id].push(a)
+      return acc
+    }, {})
+
+    return gigs.filter(g => {
+      const artists      = artistsByGig[g.gig_id] || []
+      const isUninvoiced = g.status !== 'cancelled' && (g.status !== 'performed' || g.needs_invoicing)
+      const isInvoiced   = g.status === 'performed' && !g.needs_invoicing
+      const noArtist     = artists.length === 0
+      const uninsured     = artists.some(a => !a.insurance_issued)
+
+      if (filterUninvoiced && !isUninvoiced) return false
+      if (filterInvoiced   && !isInvoiced)   return false
+      if (filterNoArtist   && !noArtist)     return false
+      if (filterUninsured  && !uninsured)    return false
+      return true
+    })
+  }, [gigs, weekGigArtists, filterUninvoiced, filterInvoiced, filterNoArtist, filterUninsured])
 
   // ── save gig ──────────────────────────────────────────────
   const { save: saveGig, saving: savingGig, saveError: gigError, clearError: clearGigError } = useSave(
@@ -337,7 +368,7 @@ export default function Weekly() {
         {/* divider */}
         <div style={{ width: 1, height: 24, background: 'var(--border)', flexShrink: 0 }} />
         {/* view options */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-4)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-4)', flexWrap: 'wrap' }}>
           <label className="checkbox-label" style={{ gap: 'var(--sp-2)' }}>
             <input
               type="checkbox"
@@ -347,6 +378,56 @@ export default function Weekly() {
             />
             <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Show artist names</span>
           </label>
+
+          <label className="checkbox-label" style={{ gap: 'var(--sp-2)' }}>
+            <input
+              type="checkbox"
+              checked={filterUninvoiced}
+              onChange={e => { setFilterUninvoiced(e.target.checked); if (e.target.checked) setFilterInvoiced(false) }}
+              style={{ accentColor: 'var(--amber)', width: 14, height: 14 }}
+            />
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>€? Not invoiced (incl. not performed)</span>
+          </label>
+
+          <label className="checkbox-label" style={{ gap: 'var(--sp-2)' }}>
+            <input
+              type="checkbox"
+              checked={filterInvoiced}
+              onChange={e => { setFilterInvoiced(e.target.checked); if (e.target.checked) setFilterUninvoiced(false) }}
+              style={{ accentColor: 'var(--green)', width: 14, height: 14 }}
+            />
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>€✓ Invoiced only</span>
+          </label>
+
+          <label className="checkbox-label" style={{ gap: 'var(--sp-2)' }}>
+            <input
+              type="checkbox"
+              checked={filterNoArtist}
+              onChange={e => setFilterNoArtist(e.target.checked)}
+              style={{ accentColor: 'var(--red)', width: 14, height: 14 }}
+            />
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>⚠ No artist</span>
+          </label>
+
+          <label className="checkbox-label" style={{ gap: 'var(--sp-2)' }}>
+            <input
+              type="checkbox"
+              checked={filterUninsured}
+              onChange={e => setFilterUninsured(e.target.checked)}
+              style={{ accentColor: 'var(--red)', width: 14, height: 14 }}
+            />
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>ins! Uninsured</span>
+          </label>
+
+          {(filterUninvoiced || filterInvoiced || filterNoArtist || filterUninsured) && (
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ color: 'var(--text-muted)' }}
+              onClick={() => { setFilterUninvoiced(false); setFilterInvoiced(false); setFilterNoArtist(false); setFilterUninsured(false) }}
+            >
+              ✕ Clear filters
+            </button>
+          )}
         </div>
       </div>
 
@@ -354,7 +435,7 @@ export default function Weekly() {
       <ProgrammeGrid
         weekStart={weekStart}
         hotels={filteredHotels}
-        gigs={gigs}
+        gigs={filteredGigs}
         gigArtists={weekGigArtists}
         showArtists={showArtists}
         loading={loading}
