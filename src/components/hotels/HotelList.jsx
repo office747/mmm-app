@@ -37,7 +37,7 @@ export default function HotelList({ hotels = [], loading, onAdd, onEdit }) {
             <tr>
               <th>Name</th>
               <th>Legal name</th>
-              <th>Billing</th>
+              <th>Invoice schedule</th>
               <th>Season</th>
               <th>Status</th>
               <th></th>
@@ -67,9 +67,18 @@ export default function HotelList({ hotels = [], loading, onAdd, onEdit }) {
                 <td style={{ fontWeight: 'var(--weight-medium)' }}>{hotel.name}</td>
                 <td style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-xs)' }}>{hotel.legal_name || '—'}</td>
                 <td>
-                  <span className="badge badge-neutral">
-                    {hotel.billing_cycle === 'daily' ? 'Daily' : 'Weekly'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+                    {hotel.color && (
+                      <span style={{
+                        width: 10, height: 10, borderRadius: '50%',
+                        background: hotel.color, flexShrink: 0,
+                        display: 'inline-block',
+                      }} />
+                    )}
+                    <span className="badge badge-neutral">
+                      {hotel.billing_schedule || (hotel.billing_cycle === 'daily' ? 'Daily' : 'Weekly')}
+                    </span>
+                  </div>
                 </td>
                 <td style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
                   {hotel.season_start && hotel.season_end

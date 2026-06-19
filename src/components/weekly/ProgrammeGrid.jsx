@@ -132,6 +132,8 @@ export default function ProgrammeGrid({
                 zIndex: 1,
                 whiteSpace: 'nowrap',
                 boxShadow: '2px 0 0 var(--border)',
+                borderLeft: 'none',
+                borderRight: hotel.color ? `4px solid ${hotel.color}` : '2px solid var(--border-strong)',
               }}>
                 <div
                   onClick={() => navigate(`/hotels/detail?id=${hotel.id}`)}

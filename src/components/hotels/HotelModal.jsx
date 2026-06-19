@@ -7,6 +7,7 @@ const EMPTY = {
   vat_number:       '',
   billing_cycle:    'weekly',
   billing_schedule: '',
+  color:            '',
   season_start:     '',
   season_end:       '',
   notes:            '',
@@ -22,10 +23,13 @@ export default function HotelModal({ open, hotel, contacts, onSave, onClose, sav
 
   useEffect(() => {
     if (open) {
-      setForm(hotel ? { ...EMPTY, ...hotel } : EMPTY)
-      setCtcts(contacts?.length ? contacts : [{ ...EMPTY_CONTACT }])
+      setForm(hotel
+        ? { ...EMPTY, ...Object.fromEntries(Object.entries(hotel).map(([k, v]) => [k, v ?? ''])) }
+        : { ...EMPTY }
+      )
+      setCtcts(contacts?.length ? contacts.map(c => ({ ...c })) : [{ ...EMPTY_CONTACT }])
     }
-  }, [open, hotel, contacts])
+  }, [open, hotel])
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
@@ -107,14 +111,32 @@ export default function HotelModal({ open, hotel, contacts, onSave, onClose, sav
             </div>
           </div>
 
-          <div className="form-row">
-            <label>Billing schedule</label>
-            <input
-              type="text"
-              value={form.billing_schedule}
-              onChange={e => set('billing_schedule', e.target.value)}
-              placeholder="e.g. every Tuesday, 2nd of each month, every other Friday…"
-            />
+          <div className="form-grid">
+            <div className="form-row">
+              <label>Billing schedule</label>
+              <input
+                type="text"
+                value={form.billing_schedule}
+                onChange={e => set('billing_schedule', e.target.value)}
+                placeholder="e.g. every Tuesday, 2nd of each month, every other Friday…"
+              />
+            </div>
+            <div className="form-row">
+              <label>Colour</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+                <input
+                  type="color"
+                  value={form.color || '#6b7280'}
+                  onChange={e => set('color', e.target.value)}
+                  style={{ width: 40, height: 36, padding: 2, borderRadius: 'var(--radius)', border: '1px solid var(--border-strong)', cursor: 'pointer' }}
+                />
+                {form.color && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => set('color', '')} style={{ color: 'var(--text-muted)' }}>
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="form-grid">

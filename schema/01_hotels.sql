@@ -9,6 +9,7 @@ create table hotels (
   legal_name        text,                        -- e.g. ΑΡΙΩΝ ΑΞΤΕ 999273094
   billing_cycle     text not null check (billing_cycle in ('daily', 'weekly')),
   billing_schedule  text,                        -- free-text schedule, e.g. "every Tuesday", "1st of each month"
+  color             text,                        -- hex color for visual identification e.g. #e63946
   vat_number        text,
   season_start      date,
   season_end        date,

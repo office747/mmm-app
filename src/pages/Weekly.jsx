@@ -50,7 +50,7 @@ export default function Weekly() {
 
   // ── data fetching ─────────────────────────────────────────
   const { data: hotels, loading: hotelsLoading } = useSupabase(
-    () => supabase.from('hotels').select('id, name, billing_cycle, billing_schedule').eq('active', true).order('name'),
+    () => supabase.from('hotels').select('id, name, billing_cycle, billing_schedule, color').eq('active', true).order('name'),
     []
   )
 
