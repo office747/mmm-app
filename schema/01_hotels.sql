@@ -4,17 +4,18 @@
 -- ============================================================
 
 create table hotels (
-  id           uuid primary key default gen_random_uuid(),
-  name         text not null,
-  legal_name   text,                        -- e.g. ΑΡΙΩΝ ΑΞΤΕ 999273094
-  billing_cycle text not null check (billing_cycle in ('daily', 'weekly')),
-  vat_number   text,
-  season_start date,
-  season_end   date,
-  notes        text,
-  active       boolean not null default true,
-  created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
+  id                uuid primary key default gen_random_uuid(),
+  name              text not null,
+  legal_name        text,                        -- e.g. ΑΡΙΩΝ ΑΞΤΕ 999273094
+  billing_cycle     text not null check (billing_cycle in ('daily', 'weekly')),
+  billing_schedule  text,                        -- free-text schedule, e.g. "every Tuesday", "1st of each month"
+  vat_number        text,
+  season_start      date,
+  season_end        date,
+  notes             text,
+  active            boolean not null default true,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
 );
 
 -- one primary billing contact per hotel, others are cc

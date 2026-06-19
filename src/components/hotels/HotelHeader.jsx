@@ -17,7 +17,7 @@ export default function HotelHeader({ hotel }) {
           <h1 className="page-title">{hotel?.name}</h1>
           <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: 'var(--sp-1)' }}>
             {hotel?.legal_name && <>{hotel.legal_name} &nbsp;·&nbsp;</>}
-            Billing: <strong>{hotel?.billing_cycle}</strong>
+            Billing: <strong>{hotel?.billing_schedule || hotel?.billing_cycle}</strong>
             {primaryContact?.email && <> &nbsp;·&nbsp; {primaryContact.email}</>}
             {hotel?.season_start && (
               <> &nbsp;·&nbsp; Season: {hotel.season_start} – {hotel.season_end}</>

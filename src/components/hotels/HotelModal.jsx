@@ -3,13 +3,14 @@ import { SaveError } from '../ui/index.jsx'
 
 const EMPTY = {
   name:          '',
-  legal_name:    '',
-  vat_number:    '',
-  billing_cycle: 'weekly',
-  season_start:  '',
-  season_end:    '',
-  notes:         '',
-  active:        true,
+  legal_name:       '',
+  vat_number:       '',
+  billing_cycle:    'weekly',
+  billing_schedule: '',
+  season_start:     '',
+  season_end:       '',
+  notes:            '',
+  active:           true,
 }
 
 const EMPTY_CONTACT = { name: '', email: '', phone: '', is_primary: true }
@@ -104,6 +105,16 @@ export default function HotelModal({ open, hotel, contacts, onSave, onClose, sav
                 <option value="inactive">Inactive</option>
               </select>
             </div>
+          </div>
+
+          <div className="form-row">
+            <label>Billing schedule</label>
+            <input
+              type="text"
+              value={form.billing_schedule}
+              onChange={e => set('billing_schedule', e.target.value)}
+              placeholder="e.g. every Tuesday, 2nd of each month, every other Friday…"
+            />
           </div>
 
           <div className="form-grid">

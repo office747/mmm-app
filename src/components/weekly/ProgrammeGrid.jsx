@@ -140,7 +140,7 @@ export default function ProgrammeGrid({
                   {hotel.name}
                 </div>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 'var(--weight-normal)' }}>
-                  invoicing {hotel.billing_cycle}
+                  {hotel.billing_schedule || `invoicing ${hotel.billing_cycle}`}
                 </div>
               </td>
 
